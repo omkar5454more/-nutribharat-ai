@@ -1,9 +1,11 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Button, Field, H1, Muted, Notice, Screen } from '@/components/ui';
+import { useT } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 
 export default function ForgotPassword() {
+  const t = useT();
   const [email, setEmail] = useState('');
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
@@ -14,17 +16,17 @@ export default function ForgotPassword() {
     await supabase.auth.resetPasswordForEmail(email.trim());
     setBusy(false);
     // same message whether or not the email exists, so accounts cannot be probed
-    setMessage('If that email has an account, a reset link is on its way.');
+    setMessage(t('auth.resetSent'));
   }
 
   return (
     <Screen>
-      <H1>Reset password</H1>
-      <Muted>Enter your email and we will send you a reset link.</Muted>
-      <Field label="Email" value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
+      <H1>{t('auth.resetTitle')}</H1>
+      <Muted>{t('auth.resetBody')}</Muted>
+      <Field label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" />
       {message ? <Notice tone="info">{message}</Notice> : null}
-      <Button title="Send reset link" onPress={submit} loading={busy} />
-      <Link href="/sign-in" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 8 }}>Back to sign in</Link>
+      <Button title={t('auth.sendReset')} onPress={submit} loading={busy} />
+      <Link href="/sign-in" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 8 }}>{t('auth.back')}</Link>
     </Screen>
   );
 }

@@ -36,6 +36,11 @@ export type ProfileInput = {
   reproductive: ReproductiveStatus;
 };
 
+export type NoteCode =
+  | 'minor_see_pro' | 'minor_no_loss' | 'repro_pregnant' | 'repro_breastfeeding' | 'repro_no_loss'
+  | 'underweight_no_loss' | 'floor_held' | 'bmi_outside';
+export type Note = { code: NoteCode; params?: Record<string, number | string> };
+
 export type Targets = {
   bmr: number;
   tdee: number;
@@ -45,8 +50,8 @@ export type Targets = {
   fat_g: number;
   water_ml: number;
   bmi: number;
-  /** Plain-language notes the UI must show (safety boundaries, why a goal was adjusted). */
-  notes: string[];
+  /** Safety notes the UI must show (why a goal was adjusted, when to see a professional). Codes are translated in the UI. */
+  notes: Note[];
   /** True when the user should be pointed to a doctor / dietitian instead of trusting the numbers. */
   seeProfessional: boolean;
 };

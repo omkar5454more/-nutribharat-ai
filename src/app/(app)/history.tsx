@@ -1,12 +1,15 @@
 import { useState } from 'react';
 import { Alert, Platform, Text, View } from 'react-native';
 import { Button, Card, H1, Muted, Notice, Screen } from '@/components/ui';
+import { useFoodLabel, useT, type Key } from '@/i18n';
 import { deleteMeal, startOfDay, totalsOf, useInvalidateMeals, useMeals, type MealRow } from '@/lib/data';
 import { useSession } from '@/state/session';
 
 const DAYS = 7;
 
 export default function History() {
+  const t = useT();
+  const label = useFoodLabel();
   const { session } = useSession();
   const [error, setError] = useState('');
   const invalidate = useInvalidateMeals();
@@ -25,37 +28,35 @@ export default function History() {
       await deleteMeal(id);
       invalidate();
     } catch {
-      setError('Could not delete that meal. Please try again.');
+      setError(t('hist.deleteFail'));
     }
   }
 
   function confirmDelete(id: string) {
-    if (Platform.OS === 'web') return void (window.confirm('Delete this meal?') && remove(id));
-    Alert.alert('Delete this meal?', undefined, [{ text: 'Cancel', style: 'cancel' }, { text: 'Delete', style: 'destructive', onPress: () => remove(id) }]);
+    if (Platform.OS === 'web') return void (window.confirm(t('hist.deleteTitle')) && remove(id));
+    Alert.alert(t('hist.deleteTitle'), undefined, [{ text: t('common.cancel'), style: 'cancel' }, { text: t('common.delete'), style: 'destructive', onPress: () => remove(id) }]);
   }
 
   return (
     <Screen>
-      <H1>Last {DAYS} days</H1>
+      <H1>{t('hist.title', { n: DAYS })}</H1>
       {error ? <Notice>{error}</Notice> : null}
-      {meals.isLoading ? <Muted>Loading…</Muted> : null}
-      {!meals.isLoading && byDay.size === 0 ? <Muted>No meals logged in the last {DAYS} days.</Muted> : null}
+      {meals.isLoading ? <Muted>{t('common.loading')}</Muted> : null}
+      {!meals.isLoading && byDay.size === 0 ? <Muted>{t('hist.none', { n: DAYS })}</Muted> : null}
       {[...byDay.entries()].map(([day, list]) => {
-        const t = totalsOf(list);
+        const tot = totalsOf(list);
         return (
           <Card key={day}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
               <Text style={{ fontWeight: '800' }}>{day}</Text>
-              <Text style={{ fontWeight: '800' }}>{Math.round(t.kcal)} kcal</Text>
+              <Text style={{ fontWeight: '800' }}>{Math.round(tot.kcal)} kcal</Text>
             </View>
-            <Muted>Protein {Math.round(t.protein_g)} g · Carbs {Math.round(t.carbs_g)} g · Fat {Math.round(t.fat_g)} g</Muted>
+            <Muted>{t('macro.protein')} {Math.round(tot.protein_g)} {t('common.g')} · {t('macro.carbs')} {Math.round(tot.carbs_g)} {t('common.g')} · {t('macro.fat')} {Math.round(tot.fat_g)} {t('common.g')}</Muted>
             {list.map((m) => (
               <View key={m.id} style={{ borderTopWidth: 1, borderTopColor: '#EEE9DD', paddingTop: 8, gap: 4 }}>
-                <Text style={{ fontWeight: '600', textTransform: 'capitalize' }}>
-                  {m.meal_type} · {Math.round(m.kcal)} kcal
-                </Text>
-                <Muted>{m.meal_items.map((i) => `${i.name} (${Math.round(i.grams)} g)`).join(', ')}</Muted>
-                <Button title="Delete" variant="link" onPress={() => confirmDelete(m.id)} />
+                <Text style={{ fontWeight: '600' }}>{t(`meal.${m.meal_type}` as Key)} · {Math.round(m.kcal)} kcal</Text>
+                <Muted>{m.meal_items.map((i) => `${label(i.food_id, i.name)} (${Math.round(i.grams)} ${t('common.g')})`).join(', ')}</Muted>
+                <Button title={t('common.delete')} variant="link" onPress={() => confirmDelete(m.id)} />
               </View>
             ))}
           </Card>

@@ -2,3 +2,6 @@ project_id = "nutribharat-ai"
 
 [functions.analyze-food]
 verify_jwt = true
+
+[functions.nutrition-chat]
+verify_jwt = true

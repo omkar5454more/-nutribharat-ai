@@ -1,22 +1,22 @@
 import { useState } from 'react';
 import { Text } from 'react-native';
-import { z } from 'zod';
-import { ACTIVITY_LABEL, computeTargets } from '@/core/goals';
+import { computeTargets } from '@/core/goals';
 import type { ActivityLevel, GoalType, ReproductiveStatus, Sex } from '@/core/types';
+import { useT, type Key } from '@/i18n';
 import { ageFrom, saveProfile, type ProfileRow } from '@/lib/data';
+import { Notes } from './common';
 import { Button, Card, Chips, Field, H2, Muted, Notice } from './ui';
 
 // India's DPDP Act requires verifiable parental consent for under-18s; the MVP simply requires adults.
 const MIN_AGE = 18;
+const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
+const DIETS = ['any', 'veg', 'egg', 'non-veg', 'vegan', 'jain'] as const;
 
-const Schema = z.object({
-  display_name: z.string().trim().max(40),
-  birth_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use the format YYYY-MM-DD, e.g. 1995-08-21.').refine((s) => !Number.isNaN(Date.parse(s)), 'That date is not valid.'),
-  height_cm: z.coerce.number().min(100, 'Height must be between 100 and 230 cm.').max(230, 'Height must be between 100 and 230 cm.'),
-  weight_kg: z.coerce.number().min(30, 'Weight must be between 30 and 250 kg.').max(250, 'Weight must be between 30 and 250 kg.'),
-});
+const validBirth = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
+const num = (s: string) => Number(s.replace(',', '.'));
 
 export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId: string; initial?: ProfileRow | null; onSaved: () => void; submitLabel: string }) {
+  const t = useT();
   const [name, setName] = useState(initial?.display_name ?? '');
   const [birth, setBirth] = useState(initial?.birth_date ?? '');
   const [height, setHeight] = useState(initial ? String(initial.height_cm) : '');
@@ -31,66 +31,69 @@ export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId:
   const [busy, setBusy] = useState(false);
 
   async function submit() {
-    const r = Schema.safeParse({ display_name: name, birth_date: birth, height_cm: height, weight_kg: weight });
     const errs: Record<string, string> = {};
-    if (!r.success) r.error.issues.forEach((i) => (errs[String(i.path[0])] = i.message));
-    else if (ageFrom(r.data.birth_date) < MIN_AGE) errs.birth_date = `You must be ${MIN_AGE} or older to use NutriBharat AI.`;
-    else if (ageFrom(r.data.birth_date) > 100) errs.birth_date = 'That date is not valid.';
-    if (Object.keys(errs).length) return setErrors(errs);
-    setErrors({});
+    if (!validBirth(birth)) errs.birth_date = t('form.dobFormat');
+    else if (ageFrom(birth) < MIN_AGE) errs.birth_date = t('form.dobAdult', { n: MIN_AGE });
+    else if (ageFrom(birth) > 100) errs.birth_date = t('form.dobInvalid');
+    if (!(num(height) >= 100 && num(height) <= 230)) errs.height_cm = t('form.heightRange');
+    if (!(num(weight) >= 30 && num(weight) <= 250)) errs.weight_kg = t('form.weightRange');
+    setErrors(errs);
+    if (Object.keys(errs).length) return;
     setBusy(true);
     try {
       await saveProfile(userId, {
-        ...r.data!, sex, activity, goal, reproductive: sex === 'male' ? 'none' : repro, diet,
+        display_name: name.trim().slice(0, 40), birth_date: birth, height_cm: num(height), weight_kg: num(weight),
+        sex, activity, goal, reproductive: sex === 'male' ? 'none' : repro, diet,
         allergies: allergies.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean).slice(0, 20),
       });
       onSaved();
     } catch (e) {
-      setErrors({ form: e instanceof Error ? e.message : 'Could not save. Please try again.' });
+      setErrors({ form: t('form.saveFail') });
     } finally {
       setBusy(false);
     }
   }
 
-  const preview =
-    r2(birth, height, weight) &&
-    computeTargets({ sex, age: ageFrom(birth), height_cm: +height, weight_kg: +weight, activity, goal, reproductive: sex === 'male' ? 'none' : repro });
+  const ready = validBirth(birth) && num(height) >= 100 && num(height) <= 230 && num(weight) >= 30 && num(weight) <= 250 && ageFrom(birth) >= MIN_AGE && ageFrom(birth) <= 100;
+  const preview = ready ? computeTargets({ sex, age: ageFrom(birth), height_cm: num(height), weight_kg: num(weight), activity, goal, reproductive: sex === 'male' ? 'none' : repro }) : null;
 
   return (
     <>
-      <Field label="Name (optional)" value={name} onChangeText={setName} maxLength={40} />
-      <Field label="Date of birth" value={birth} onChangeText={setBirth} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" error={errors.birth_date} />
-      <Field label="Height (cm)" value={height} onChangeText={setHeight} keyboardType="decimal-pad" error={errors.height_cm} />
-      <Field label="Weight (kg)" value={weight} onChangeText={setWeight} keyboardType="decimal-pad" error={errors.weight_kg} />
+      <Field label={t('form.name')} value={name} onChangeText={setName} maxLength={40} />
+      <Field label={t('form.dob')} value={birth} onChangeText={setBirth} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" error={errors.birth_date} />
+      <Field label={t('form.height')} value={height} onChangeText={setHeight} keyboardType="decimal-pad" error={errors.height_cm} />
+      <Field label={t('form.weight')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" error={errors.weight_kg} />
 
-      <H2>Sex</H2>
-      <Chips value={sex} onChange={setSex} options={[{ value: 'female', label: 'Female' }, { value: 'male', label: 'Male' }, { value: 'other', label: 'Other / prefer not to say' }]} />
-      <Muted>Used only to estimate your calorie needs; the formula differs slightly by sex.</Muted>
+      <H2>{t('form.sex')}</H2>
+      <Chips value={sex} onChange={setSex} options={(['female', 'male', 'other'] as Sex[]).map((v) => ({ value: v, label: t(`form.sex.${v}` as Key) }))} />
+      <Muted>{t('form.sexNote')}</Muted>
 
       {sex !== 'male' ? (
         <>
-          <H2>Pregnancy or breastfeeding (optional)</H2>
-          <Chips value={repro} onChange={setRepro} options={[{ value: 'none', label: 'Neither' }, { value: 'pregnant', label: 'Pregnant' }, { value: 'breastfeeding', label: 'Breastfeeding' }]} />
+          <H2>{t('form.repro')}</H2>
+          <Chips value={repro} onChange={setRepro} options={(['none', 'pregnant', 'breastfeeding'] as ReproductiveStatus[]).map((v) => ({ value: v, label: t(`form.repro.${v}` as Key) }))} />
         </>
       ) : null}
 
-      <H2>How active are you?</H2>
-      <Chips value={activity} onChange={setActivity} options={(Object.keys(ACTIVITY_LABEL) as ActivityLevel[]).map((k) => ({ value: k, label: ACTIVITY_LABEL[k].split(' — ')[0] }))} />
-      <Muted>{ACTIVITY_LABEL[activity]}</Muted>
+      <H2>{t('form.activity')}</H2>
+      <Chips value={activity} onChange={setActivity} options={ACTIVITIES.map((v) => ({ value: v, label: t(`act.${v}` as Key) }))} />
+      <Muted>{t(`act.${activity}.d` as Key)}</Muted>
 
-      <H2>Your goal</H2>
-      <Chips value={goal} onChange={setGoal} options={[{ value: 'lose', label: 'Lose weight' }, { value: 'maintain', label: 'Stay the same' }, { value: 'gain', label: 'Gain weight' }]} />
+      <H2>{t('form.goal')}</H2>
+      <Chips value={goal} onChange={setGoal} options={(['lose', 'maintain', 'gain'] as GoalType[]).map((v) => ({ value: v, label: t(`form.goal.${v}` as Key) }))} />
 
-      <H2>Food preference</H2>
-      <Chips value={diet} onChange={setDiet} options={[{ value: 'any', label: 'Anything' }, { value: 'veg', label: 'Vegetarian' }, { value: 'egg', label: 'Eggetarian' }, { value: 'non-veg', label: 'Non-veg' }, { value: 'vegan', label: 'Vegan' }, { value: 'jain', label: 'Jain' }]} />
-      <Field label="Allergies (optional, comma separated)" value={allergies} onChangeText={setAllergies} placeholder="peanuts, milk" />
+      <H2>{t('form.diet')}</H2>
+      <Chips value={diet as (typeof DIETS)[number]} onChange={setDiet} options={DIETS.map((v) => ({ value: v, label: t(`form.diet.${v}` as Key) }))} />
+      <Field label={t('form.allergies')} value={allergies} onChangeText={setAllergies} placeholder={t('form.allergiesPh')} />
 
       {preview ? (
         <Card>
-          <H2>Your daily targets</H2>
+          <H2>{t('form.targets')}</H2>
           <Text style={{ fontSize: 22, fontWeight: '800' }}>{preview.kcal} kcal</Text>
-          <Muted>Protein {preview.protein_g} g · Carbs {preview.carbs_g} g · Fat {preview.fat_g} g · Water {(preview.water_ml / 1000).toFixed(1)} L</Muted>
-          {preview.notes.map((n) => <Notice key={n}>{n}</Notice>)}
+          <Muted>
+            {t('macro.protein')} {preview.protein_g} {t('common.g')} · {t('macro.carbs')} {preview.carbs_g} {t('common.g')} · {t('macro.fat')} {preview.fat_g} {t('common.g')} · {t('macro.water')} {(preview.water_ml / 1000).toFixed(1)} L
+          </Muted>
+          <Notes notes={preview.notes} />
         </Card>
       ) : null}
 
@@ -99,5 +102,3 @@ export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId:
     </>
   );
 }
-
-const r2 = (birth: string, h: string, w: string) => /^\d{4}-\d{2}-\d{2}$/.test(birth) && !Number.isNaN(Date.parse(birth)) && +h >= 100 && +h <= 230 && +w >= 30 && +w <= 250 && ageFrom(birth) >= MIN_AGE && ageFrom(birth) <= 100;

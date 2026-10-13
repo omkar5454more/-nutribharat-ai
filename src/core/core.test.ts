@@ -122,7 +122,7 @@ describe('goal calculator', () => {
       const t = computeTargets({ ...base, sex: 'female', goal: 'lose', reproductive });
       expect(t.seeProfessional).toBe(true);
       expect(t.kcal).toBeGreaterThanOrEqual(t.tdee - 10);
-      expect(t.notes.join(' ')).toMatch(/doctor or dietitian/);
+      expect(t.notes.map((n) => n.code)).toContain(reproductive === 'pregnant' ? 'repro_pregnant' : 'repro_breastfeeding');
     }
   });
 

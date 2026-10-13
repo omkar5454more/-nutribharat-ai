@@ -4,6 +4,7 @@ import { computeTargets } from '@/core/goals';
 import { FOOD_BY_ID } from '@/core/foods';
 import { ScanResultSchema, type ScanResult } from '@/core/match';
 import { sumNutrients } from '@/core/nutrition';
+import { dayKey, type WeightLog } from '@/core/progress';
 import type { MealItem, Nutrients, ProfileInput } from '@/core/types';
 import { supabase } from './supabase';
 
@@ -61,7 +62,7 @@ export type MealRow = {
   eaten_at: string;
   meal_type: MealType;
   kcal: number; protein_g: number; carbs_g: number; fat_g: number; fiber_g: number;
-  meal_items: { id: string; name: string; grams: number; kcal: number }[];
+  meal_items: { id: string; food_id: string; name: string; grams: number; kcal: number }[];
 };
 
 export const mealTypeNow = (d = new Date()): MealType => {
@@ -78,7 +79,7 @@ export function useMeals(userId: string | undefined, from: Date, to: Date) {
     queryFn: async (): Promise<MealRow[]> => {
       const { data, error } = await supabase
         .from('meals')
-        .select('id, eaten_at, meal_type, kcal, protein_g, carbs_g, fat_g, fiber_g, meal_items(id, name, grams, kcal)')
+        .select('id, eaten_at, meal_type, kcal, protein_g, carbs_g, fat_g, fiber_g, meal_items(id, food_id, name, grams, kcal)')
         .gte('eaten_at', from.toISOString())
         .lt('eaten_at', to.toISOString())
         .order('eaten_at', { ascending: false });
@@ -138,3 +139,66 @@ export async function analyzePhoto(base64: string, mediaType = 'image/jpeg'): Pr
 }
 
 export const foodName = (id: string) => FOOD_BY_ID[id]?.name ?? id;
+
+// ---------------------------------------------------------------- water
+export type WaterLog = { id: string; ml: number; logged_at: string };
+export const GLASS_ML = 250;
+
+export function useWater(userId: string | undefined, from: Date, to: Date) {
+  return useQuery({
+    queryKey: ['water', userId, from.toISOString()],
+    enabled: !!userId,
+    queryFn: async (): Promise<WaterLog[]> => {
+      const { data, error } = await supabase.from('water_logs').select('id, ml, logged_at').gte('logged_at', from.toISOString()).lt('logged_at', to.toISOString()).order('logged_at', { ascending: false });
+      if (error) throw error;
+      return (data ?? []).map((w: any) => ({ id: w.id, ml: +w.ml, logged_at: w.logged_at }));
+    },
+  });
+}
+
+export async function addWater(userId: string, ml = GLASS_ML) {
+  const { error } = await supabase.from('water_logs').insert({ user_id: userId, ml });
+  if (error) throw error;
+}
+
+export async function deleteWater(id: string) {
+  const { error } = await supabase.from('water_logs').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------- weight
+export function useWeights(userId: string | undefined) {
+  return useQuery({
+    queryKey: ['weights', userId],
+    enabled: !!userId,
+    queryFn: async (): Promise<WeightLog[]> => {
+      const { data, error } = await supabase.from('weight_logs').select('logged_on, weight_kg').order('logged_on', { ascending: true }).limit(365);
+      if (error) throw error;
+      return (data ?? []).map((w: any) => ({ date: w.logged_on, weight_kg: +w.weight_kg }));
+    },
+  });
+}
+
+/** One weigh-in per day: logging again on the same day replaces it. */
+export async function logWeight(userId: string, weight_kg: number, date = dayKey(new Date())) {
+  const { error } = await supabase.from('weight_logs').upsert({ user_id: userId, logged_on: date, weight_kg }, { onConflict: 'user_id,logged_on' });
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------- chat
+export type ChatMessage = { role: 'user' | 'assistant'; content: string };
+export type ChatContext = {
+  goal: string; diet: string; allergies: string[]; reproductive: string; age_band: 'adult';
+  kcal_target: number; kcal_eaten: number; protein_target: number; protein_eaten: number;
+};
+
+export async function askAssistant(messages: ChatMessage[], context: ChatContext, language: string): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('nutrition-chat', { body: { messages, context, language } });
+  if (error) {
+    let msg = '';
+    try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* use default */ }
+    throw new Error(msg || 'unavailable');
+  }
+  const reply = z.object({ reply: z.string().min(1) }).parse(data);
+  return reply.reply;
+}

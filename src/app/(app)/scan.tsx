@@ -7,11 +7,13 @@ import { Button, Muted, Notice, Screen } from '@/components/ui';
 import { matchFood } from '@/core/match';
 import { makeItem } from '@/core/nutrition';
 import type { MealItem } from '@/core/types';
+import { useT } from '@/i18n';
 import { analyzePhoto } from '@/lib/data';
 import { colors } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
 
 export default function Scan() {
+  const t = useT();
   const router = useRouter();
   const start = useDraft((s) => s.start);
   const [uri, setUri] = useState<string | null>(null);
@@ -21,7 +23,7 @@ export default function Scan() {
   async function pick(source: 'camera' | 'library') {
     setError('');
     const perm = source === 'camera' ? await ImagePicker.requestCameraPermissionsAsync() : await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!perm.granted) return setError(source === 'camera' ? 'Camera permission is needed to scan a meal. You can allow it in Settings, or choose a photo from your gallery.' : 'Photo access is needed to choose a picture. You can allow it in Settings.');
+    if (!perm.granted) return setError(source === 'camera' ? t('scan.camPerm') : t('scan.libPerm'));
     const opts: ImagePicker.ImagePickerOptions = { mediaTypes: ['images'], quality: 1 };
     const res = source === 'camera' ? await ImagePicker.launchCameraAsync(opts) : await ImagePicker.launchImageLibraryAsync(opts);
     if (res.canceled) return;
@@ -42,11 +44,11 @@ export default function Scan() {
       }
       const rendered = await ctx.renderAsync();
       const out = await rendered.saveAsync({ format: ImageManipulator.SaveFormat.JPEG, compress: 0.7, base64: true });
-      if (!out.base64) throw new Error('Could not read the photo.');
+      if (!out.base64) throw new Error(t('common.error'));
 
       const result = await analyzePhoto(out.base64);
       if (!result.is_food || result.items.length === 0) {
-        setError('We could not see any food in that photo. Try again in better light, or add the food manually.');
+        setError(t('scan.noFood'));
         return;
       }
       const items: MealItem[] = [];
@@ -59,7 +61,7 @@ export default function Scan() {
       start(items, unmatched);
       router.replace('/review');
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Something went wrong. Please try again.');
+      setError(e instanceof Error && e.message ? e.message : t('common.error'));
     } finally {
       setBusy(false);
     }
@@ -67,22 +69,22 @@ export default function Scan() {
 
   return (
     <Screen>
-      <Muted>Take a clear photo from above, with all the food in view. You will be able to correct anything on the next screen.</Muted>
-      {uri ? <Image source={{ uri }} style={{ width: '100%', height: 260, borderRadius: 14, backgroundColor: colors.border }} accessibilityLabel="Your meal photo" /> : null}
+      <Muted>{t('scan.tips')}</Muted>
+      {uri ? <Image source={{ uri }} style={{ width: '100%', height: 260, borderRadius: 14, backgroundColor: colors.border }} accessibilityLabel="Meal" /> : null}
       {busy ? (
         <View style={{ alignItems: 'center', gap: 8, padding: 16 }}>
           <ActivityIndicator size="large" color={colors.primary} />
-          <Muted>Looking at your meal…</Muted>
+          <Muted>{t('scan.looking')}</Muted>
         </View>
       ) : (
         <>
-          {Platform.OS !== 'web' ? <Button title="📷  Take a photo" onPress={() => pick('camera')} /> : null}
-          <Button title="🖼  Choose from gallery" variant="secondary" onPress={() => pick('library')} />
-          <Button title="Add food without a photo" variant="link" onPress={() => { useDraft.getState().reset(); router.replace('/review'); }} />
+          {Platform.OS !== 'web' ? <Button title={t('scan.camera')} onPress={() => pick('camera')} /> : null}
+          <Button title={t('scan.gallery')} variant="secondary" onPress={() => pick('library')} />
+          <Button title={t('scan.noPhoto')} variant="link" onPress={() => { useDraft.getState().reset(); router.replace('/review'); }} />
         </>
       )}
       {error ? <Notice>{error}</Notice> : null}
-      <Muted>Photos are analysed by AI and are not stored. Estimates from a photo can be off, especially for oil, ghee and sugar, so please check the amounts.</Muted>
+      <Muted>{t('scan.privacy')}</Muted>
     </Screen>
   );
 }

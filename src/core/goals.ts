@@ -1,4 +1,4 @@
-import type { ActivityLevel, ProfileInput, Targets } from './types';
+import type { ActivityLevel, Note, ProfileInput, Targets } from './types';
 
 const ACTIVITY_FACTOR: Record<ActivityLevel, number> = {
   sedentary: 1.2,
@@ -40,7 +40,7 @@ export function bmi(height_cm: number, weight_kg: number): number {
  *  - no deficit when BMI is already under 18.5
  */
 export function computeTargets(p: ProfileInput): Targets {
-  const notes: string[] = [];
+  const notes: Note[] = [];
   let seeProfessional = false;
 
   const rest = bmr(p);
@@ -48,7 +48,7 @@ export function computeTargets(p: ProfileInput): Targets {
   const bmiValue = bmi(p.height_cm, p.weight_kg);
 
   let goal = p.goal;
-  const noDeficit = (why: string) => {
+  const noDeficit = (why: Note) => {
     if (goal === 'lose') {
       goal = 'maintain';
       notes.push(why);
@@ -57,21 +57,17 @@ export function computeTargets(p: ProfileInput): Targets {
 
   if (p.age < 18) {
     seeProfessional = true;
-    notes.push('For under-18s, calorie targets should come from a doctor or dietitian. These numbers are only a rough guide for maintaining weight.');
-    noDeficit('Weight-loss targets are not offered under 18.');
+    notes.push({ code: 'minor_see_pro' });
+    noDeficit({ code: 'minor_no_loss' });
   }
   if (p.reproductive !== 'none') {
     seeProfessional = true;
-    notes.push(
-      p.reproductive === 'pregnant'
-        ? 'Pregnancy changes your needs month by month. Please follow your doctor or dietitian’s plan; these numbers are only a baseline.'
-        : 'Breastfeeding raises your energy and fluid needs. Please follow your doctor or dietitian’s plan; these numbers are only a baseline.'
-    );
-    noDeficit('Weight-loss targets are not offered during pregnancy or breastfeeding.');
+    notes.push({ code: p.reproductive === 'pregnant' ? 'repro_pregnant' : 'repro_breastfeeding' });
+    noDeficit({ code: 'repro_no_loss' });
   }
   if (bmiValue < 18.5 && goal === 'lose') {
     seeProfessional = true;
-    noDeficit('Your BMI is under 18.5, so a weight-loss target is not suggested. Consider talking to a doctor or dietitian.');
+    noDeficit({ code: 'underweight_no_loss' });
   }
 
   let kcal = tdee;
@@ -80,7 +76,7 @@ export function computeTargets(p: ProfileInput): Targets {
     const floor = KCAL_FLOOR[p.sex];
     if (kcal < floor) {
       kcal = floor;
-      notes.push(`Your target is held at ${floor} kcal, the lowest this app suggests without a professional’s advice.`);
+      notes.push({ code: 'floor_held', params: { floor } });
     }
   } else if (goal === 'gain') {
     kcal = tdee + Math.min(400, tdee * 0.1);
@@ -97,7 +93,7 @@ export function computeTargets(p: ProfileInput): Targets {
 
   if (bmiValue >= 30 || bmiValue < 16) {
     seeProfessional = true;
-    notes.push('Your BMI is outside the range where general guidance is reliable. Please check with a doctor or dietitian.');
+    notes.push({ code: 'bmi_outside' });
   }
 
   return {
