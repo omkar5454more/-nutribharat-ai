@@ -50,7 +50,7 @@ In Supabase → Authentication you can turn email confirmation on or off; the ap
   Add a privacy policy, a consent screen and a data-retention statement before launch. Meal photos are not stored.
 - **Medical boundaries**: the app gives general wellness guidance only. It offers no weight-loss deficit under 18, in pregnancy,
   while breastfeeding or at an underweight BMI, and points those users to a doctor or dietitian. Have a qualified dietitian review the wording.
-- **Password reset**: the app sends the reset email, but setting the new password needs deep-link handling (planned for Release 2).
+- **Password reset**: the app sends the reset email, but setting the new password needs deep-link handling (not built yet; planned for Release 3).
 - **Hindi / Marathi wording** was written by an AI and needs review by a native speaker and a dietitian, especially the safety notes.
   Error messages that come from the edge functions are still English.
 - **Meal planner**: combinations are hand-written starter templates, not a clinical diet. Jain plans use a small curated set; allergies are only
