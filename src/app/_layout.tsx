@@ -1,10 +1,10 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SplashScreen, Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { Card, H1, Muted, Notice, Screen } from '@/components/ui';
 import { useProfile } from '@/lib/data';
-import { isConfigured } from '@/lib/supabase';
+import { isConfigured, isDemo, resetDemoData } from '@/lib/supabase';
 import { SessionProvider, useSession } from '@/state/session';
 
 SplashScreen.preventAutoHideAsync();
@@ -23,6 +23,19 @@ function SetupNeeded() {
         <Muted>4. Restart the app with: npx expo start --clear</Muted>
       </Card>
     </Screen>
+  );
+}
+
+function DemoBanner() {
+  return (
+    <View style={{ backgroundColor: '#FFF4E0', paddingVertical: 6, paddingHorizontal: 12, flexDirection: 'row', alignItems: 'center', gap: 8 }} accessibilityRole="alert">
+      <Text style={{ flex: 1, fontSize: 12, color: '#7A4B00' }}>
+        DEMO — any email/password works. Data stays in this browser; the AI replies are pre-written.
+      </Text>
+      <Pressable onPress={resetDemoData} accessibilityRole="button" accessibilityLabel="Reset demo data">
+        <Text style={{ fontSize: 12, fontWeight: '700', color: '#7A4B00', textDecorationLine: 'underline' }}>Reset</Text>
+      </Pressable>
+    </View>
   );
 }
 
@@ -59,6 +72,7 @@ export default function Root() {
       <StatusBar style="dark" />
       {isConfigured ? (
         <SessionProvider>
+          {isDemo ? <DemoBanner /> : null}
           <Navigator />
         </SessionProvider>
       ) : (

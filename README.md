@@ -23,7 +23,17 @@ Dishes the app can't match are flagged, never guessed.
 - `supabase/migrations/` — `0001_init.sql` (tables, row-level security, `delete_my_account()`), `0002_v2.sql` (water, weight, usage kinds). Run both, in order.
 - `supabase/functions/analyze-food/` and `nutrition-chat/` — the AI calls (Deno). The Anthropic key lives only here.
 
-## Set up (about 15 minutes)
+## See it in 1 minute (demo mode — no accounts, no keys)
+```
+npm install
+npm run demo        # opens http://localhost:8081 in your browser
+```
+Any email and password work. Everything runs in the browser against a built-in fake backend (`src/lib/demoBackend.ts`): data is kept in
+this browser only, sample meals and weigh-ins are added when you create a profile, and the AI scan / chat give **pre-written** answers
+(labelled "Demo reply"). The yellow banner has a **Reset** button. Demo mode is only on when `EXPO_PUBLIC_DEMO=1`, which `npm run demo` sets;
+a normal build never includes it.
+
+## Set up for real (about 15 minutes)
 1. **Supabase**: create a free project at supabase.com. In the SQL editor run `supabase/migrations/0001_init.sql`, then `0002_v2.sql`.
 2. Copy `.env.example` to `.env` and paste the project URL and the publishable (anon) key (Project Settings → API).
 3. **Edge function** (needs the Supabase CLI): 
