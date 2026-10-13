@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "nutribharat-ai",
+    "name": "NutriBharat AI",
     "slug": "nutribharat-ai",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -19,7 +19,24 @@
       "predictiveBackGestureEnabled": false
     },
     "web": {
+      "bundler": "metro",
       "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-sqlite",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "NutriBharat AI uses your photos so you can scan meals.",
+          "cameraPermission": "NutriBharat AI uses the camera so you can scan meals."
+        }
+      ]
+    ],
+    "scheme": "nutribharat",
+    "experiments": {
+      "typedRoutes": true
     }
   }
 }
