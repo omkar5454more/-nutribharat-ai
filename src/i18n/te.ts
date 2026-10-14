@@ -1,7 +1,7 @@
 import type { Key } from './en';
 
 // Telugu. AI-written: have a native speaker and a dietitian review the wording (especially the safety notes) before launch.
-export const te: Record<Key, string> = {
+export const te: Partial<Record<Key, string>> = {
   "app.name": "NutriBharat AI",
   "app.tagline": "తెలివిగా తినండి. ఫిట్‌గా ఉండండి. ఆరోగ్యంగా జీవించండి.",
   "common.save": "సేవ్ చేయండి",

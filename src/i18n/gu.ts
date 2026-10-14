@@ -1,7 +1,7 @@
 import type { Key } from './en';
 
 // Gujarati. AI-written: have a native speaker and a dietitian review the wording (especially the safety notes) before launch.
-export const gu: Record<Key, string> = {
+export const gu: Partial<Record<Key, string>> = {
   "app.name": "NutriBharat AI",
   "app.tagline": "સમજદારીથી ખાઓ. ફિટ રહો. સ્વસ્થ જીવો.",
   "common.save": "સેવ કરો",

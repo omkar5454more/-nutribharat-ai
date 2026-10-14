@@ -20,7 +20,8 @@ export const LANGS: { code: Lang; label: string }[] = [
   { code: 'bn', label: 'বাংলা' },
   { code: 'gu', label: 'ગુજરાતી' },
 ];
-export const DICTS: Record<Lang, Record<Key, string>> = { en, hi, mr, ta, te, kn, bn, gu };
+/** hi and mr are complete. The other languages cover everything except the Release-4 health/routine keys (prefix 'h4.'), which show in English until translated. */
+export const DICTS: Record<Lang, Partial<Record<Key, string>>> = { en, hi, mr, ta, te, kn, bn, gu };
 const CODES = new Set<string>(Object.keys(DICTS));
 export type { Key };
 
@@ -50,7 +51,7 @@ export const useLang = create<{ lang: Lang; setLang: (l: Lang) => void }>((set) 
 export type Params = Record<string, string | number>;
 
 export function translate(lang: Lang, key: Key, params?: Params): string {
-  const text = DICTS[lang][key] ?? en[key];
+  const text = DICTS[lang][key] ?? en[key];   // missing translations show English rather than nothing
   return params ? text.replace(/\{(\w+)\}/g, (_, k) => (k in params ? String(params[k]) : `{${k}}`)) : text;
 }
 
