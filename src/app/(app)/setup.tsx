@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { FlexPlanner } from '@/components/FlexPlanner';
 import { HealthSetup } from '@/components/HealthSetup';
+import { GymForm } from '@/components/Gym';
 import { RoutineSettingsForm } from '@/components/RoutineSettingsForm';
 import { Badge, Button, Card, H1, Muted, Notice, Screen } from '@/components/ui';
 import { ymd } from '@/core/flexday';
@@ -54,6 +55,7 @@ export default function Setup() {
       {step === 5 ? (
         <>
           <Card><RoutineSettingsForm value={prefs} onChange={setPrefs} /></Card>
+          <Card><GymForm compact /></Card>
           {error ? <Notice>{error}</Notice> : null}
           <Button title={t('h4.next')} onPress={savePrefs} />
           <Button title={t('h4.skip')} variant="link" onPress={() => setStep(6)} />

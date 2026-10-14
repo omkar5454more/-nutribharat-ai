@@ -7,9 +7,9 @@ import { FOOD_BY_ID } from '@/core/foods';
 import { nutrientsFor } from '@/core/nutrition';
 
 type Row = Record<string, any>;
-const HEALTH_TABLES = ['health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events', 'symptom_logs', 'symptom_followups', 'notification_preferences', 'achievements'] as const;
+const HEALTH_TABLES = ['health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events', 'symptom_logs', 'symptom_followups', 'notification_preferences', 'achievements', 'gym_prefs', 'workout_logs'] as const;
 type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; members: Row[]; sleep_logs: Row[]; activity_logs: Row[]; seq: number } & Record<(typeof HEALTH_TABLES)[number], Row[]>;
-const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_reminders', 'monthly_flex_days', 'health_consents', 'user_health_conditions', 'recommendation_safety_events', 'symptom_logs', 'achievements'] as const;
+const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_reminders', 'monthly_flex_days', 'health_consents', 'user_health_conditions', 'recommendation_safety_events', 'symptom_logs', 'achievements', 'gym_prefs', 'workout_logs'] as const;
 export type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
 
 const KEY = 'nutribharat.demo.db';

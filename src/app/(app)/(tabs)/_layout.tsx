@@ -12,10 +12,12 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         animation: 'fade',
-        tabBarActiveTintColor: colors.primaryDark,
-        tabBarInactiveTintColor: '#8A958C',
-        tabBarStyle: { backgroundColor: '#fff', borderTopColor: colors.border, height: 64, paddingTop: 6, boxShadow: '0 -6px 20px rgba(22, 35, 27, 0.06)' } as object,
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '700', paddingBottom: 6 },
+        tabBarActiveTintColor: '#1F1B3A',
+        tabBarInactiveTintColor: '#8A8AA3',
+        // a floating, rounded bar with a dark pill on the active tab
+        tabBarStyle: { backgroundColor: '#fff', marginHorizontal: 14, marginBottom: 10, borderRadius: 30, height: 66, borderTopWidth: 0, paddingTop: 0, paddingBottom: 0, boxShadow: '0 10px 30px rgba(31, 27, 58, 0.16)' } as object,
+        tabBarItemStyle: { marginHorizontal: 2, marginVertical: 6 },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '700' },
       }}
     >
       <Tabs.Screen name="index" options={{ title: t('tab.today'), tabBarIcon: icon('home') }} />

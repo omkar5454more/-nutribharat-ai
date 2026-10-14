@@ -226,3 +226,19 @@ describe('symptom check-ins (migration 0005)', () => {
     expect((await db.query<{ n: number }>(`select count(*)::int as n from symptom_followups where user_id = '${C}'`)).rows[0].n).toBe(0);
   });
 });
+
+describe('gym (migration 0006)', () => {
+  const G = '55555555-5555-5555-5555-555555555555';
+  const H = '66666666-6666-6666-6666-666666666666';
+  it('private, validated, one row per person / per session per day', async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${G}', 'g@x.com'), ('${H}', 'h@x.com');`);
+    await as(G, `insert into gym_prefs (user_id, goes_to_gym, days_per_week, goal) values ('${G}', true, 4, 'muscle')`);
+    expect(await fails(G, `insert into gym_prefs (user_id, goes_to_gym) values ('${G}', true)`)).toBe(true);
+    expect(await fails(H, `insert into gym_prefs (user_id, goes_to_gym, days_per_week) values ('${H}', true, 9)`)).toBe(true);
+    expect(await fails(H, `insert into gym_prefs (user_id, goes_to_gym, goal) values ('${H}', true, 'bulk')`)).toBe(true);
+    expect((await as(H, `select * from gym_prefs`)).rows).toEqual([]);
+    await as(G, `insert into workout_logs (user_id, workout_date, session_key, status) values ('${G}', '2026-10-14', 'full-1', 'done')`);
+    expect(await fails(G, `insert into workout_logs (user_id, workout_date, session_key, status) values ('${G}', '2026-10-14', 'full-1', 'skipped')`)).toBe(true);
+    expect(await fails(H, `insert into workout_logs (user_id, member_id, workout_date, session_key, status) values ('${H}', gen_random_uuid(), '2026-10-14', 'x', 'done')`)).toBe(true);
+  });
+});

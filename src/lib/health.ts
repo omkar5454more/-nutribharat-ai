@@ -454,3 +454,48 @@ export async function saveNotifPrefs(uid: string, p: NotifPrefs) {
   });
   must(error);
 }
+
+// ---------------------------------------------------------------- gym
+import { DEFAULT_GYM, type GymPrefs } from '@/core/gym';
+
+export function useGymPrefs(uid: string | undefined, memberId: string | null) {
+  return useQuery({
+    queryKey: ['gym-prefs', uid, memberId],
+    enabled: !!uid,
+    queryFn: async (): Promise<(GymPrefs & { exists: boolean })> => {
+      const { data, error } = await (scoped(supabase.from('gym_prefs').select('*').eq('user_id', uid!) as any, memberId) as any);
+      must(error);
+      const r = data?.[0];
+      if (!r) return { ...DEFAULT_GYM, exists: false };
+      return { goes: !!r.goes_to_gym, daysPerWeek: r.days_per_week, goal: r.goal, level: r.level, place: r.place, exists: true };
+    },
+  });
+}
+
+export async function saveGymPrefs(uid: string, memberId: string | null, p: GymPrefs) {
+  const del = await (scoped(supabase.from('gym_prefs').delete().eq('user_id', uid) as any, memberId) as any);
+  must(del.error);
+  const { error } = await supabase.from('gym_prefs').insert({ user_id: uid, member_id: memberId, goes_to_gym: p.goes, days_per_week: p.daysPerWeek, goal: p.goal, level: p.level, place: p.place });
+  must(error);
+}
+
+export function useWorkoutLogs(uid: string | undefined, memberId: string | null, fromDate: string) {
+  return useQuery({
+    queryKey: ['workouts', uid, memberId, fromDate],
+    enabled: !!uid,
+    queryFn: async (): Promise<{ date: string; key: string; status: 'done' | 'skipped' }[]> => {
+      const { data, error } = await (scoped(supabase.from('workout_logs').select('*').eq('user_id', uid!).gte('workout_date', fromDate) as any, memberId) as any);
+      must(error);
+      return (data ?? []).map((r: any) => ({ date: r.workout_date, key: r.session_key, status: r.status }));
+    },
+  });
+}
+
+export async function setWorkoutStatus(uid: string, memberId: string | null, date: string, key: string, status: 'done' | 'skipped' | null) {
+  const del = await (scoped(supabase.from('workout_logs').delete().eq('user_id', uid).eq('workout_date', date).eq('session_key', key) as any, memberId) as any);
+  must(del.error);
+  if (status) {
+    const { error } = await supabase.from('workout_logs').insert({ user_id: uid, member_id: memberId, workout_date: date, session_key: key, status });
+    must(error);
+  }
+}
