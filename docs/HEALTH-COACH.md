@@ -13,6 +13,13 @@
 | Chat: on-device emergency / unsafe-request check; health summary to the AI only with consent | `src/app/(app)/(tabs)/chat.tsx`, `src/core/health/aiSummary.ts`, `supabase/functions/nutrition-chat` |
 | Onboarding steps 4–7, Health & privacy screen, readings, trigger diary, export, retention, deletion | `src/app/(app)/setup.tsx`, `health.tsx`, `src/components/Health*.tsx` |
 
+## AI Care check-ins and Comfort Mode (added after the first release)
+- **Check-in** (AI Care tab → "How are you feeling right now?"): symptom type → strength 1–10 → safety questions → an honest answer. Danger signs (sudden worst headache, one-sided weakness, confusion, fever with stiff neck, head injury…) show the 112 message and offer **no** routine reminder. A headache that is new/different, or not known to be migraine, advises a doctor. Only a *usual, doctor-diagnosed migraine with no danger sign* gets the gentle "quiet, dim room / follow your clinician's plan" message. No medicine is ever named. Logic: `src/core/health/symptoms.ts`.
+- **Follow-ups are opt-in** (30 / 60 / 120 min), shifted out of quiet hours, at most **two**; "better" closes the episode, "worse" re-runs the safety message, "stop" cancels everything. On the web they appear only while the app is open (the app says so).
+- **Comfort Mode:** a dim, motion-free, big-button screen the person opens and can leave in one tap; it only shows follow-ups they asked for. It does not treat anything.
+- Tables `symptom_logs`, `symptom_followups`, `notification_preferences`, `achievements` (migration `0005`) are consent-gated and removed by "Delete all my health information".
+- Everything clinical here (questions, wording, delays, the two-follow-up limit) needs clinician review.
+
 ## How safety works (in layers)
 1. **Consent first.** Health data can only be *written* while the person's `condition_tracking` consent is active — enforced by the database (`has_consent()` in the row-level-security policies), not just by the app. Withdrawing consent stops new writes and switches every health rule off; saved data stays until the person deletes it.
 2. **The person decides.** Conditions are never inferred. "A doctor told me" and "I only suspect it" are stored separately; a suspicion only unlocks general healthy-habit tips and never a rule.
