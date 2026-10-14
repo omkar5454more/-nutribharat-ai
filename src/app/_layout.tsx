@@ -4,10 +4,12 @@ import { StatusBar } from 'expo-status-bar';
 import { Pressable, Text, View } from 'react-native';
 import { Card, H1, Muted, Notice, Screen } from '@/components/ui';
 import { useProfile } from '@/lib/data';
+import { registerServiceWorker } from '@/lib/pwa';
 import { isConfigured, isDemo, resetDemoData } from '@/lib/supabase';
 import { SessionProvider, useSession } from '@/state/session';
 
 SplashScreen.preventAutoHideAsync();
+registerServiceWorker();
 const queryClient = new QueryClient({ defaultOptions: { queries: { retry: 1, staleTime: 30_000 } } });
 
 function SetupNeeded() {

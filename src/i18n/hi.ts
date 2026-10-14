@@ -201,6 +201,12 @@ export const hi: Record<Key, string> = {
   'prog.streakDays': '{n} दिन',
   'prog.streakDay': '{n} दिन',
   'prog.target': 'रोज़ का लक्ष्य',
+
+  'pwa.title': 'अपने फोन पर इंस्टॉल करें',
+  'pwa.android': 'NutriBharat AI को होम स्क्रीन पर जोड़ें ताकि यह ऐप की तरह खुले।',
+  'pwa.install': 'ऐप इंस्टॉल करें',
+  'pwa.ios': 'iPhone पर: Safari में Share बटन दबाएँ, फिर “Add to Home Screen” चुनें।',
+  'pwa.installed': 'इंस्टॉल हो गया — आप ऐप इस्तेमाल कर रहे हैं।',
   'prog.calories7': 'कैलोरी, पिछले 7 दिन',
   'prog.seeMeals': 'सारे खाने देखें',
   'advice.losing_too_fast': 'आपका वज़न हफ़्ते में शरीर के वज़न के करीब 1% से ज़्यादा तेज़ी से घट रहा है। आमतौर पर इससे धीमा घटना सही माना जाता है। कृपया पर्याप्त खाएँ, और अगर यह जानबूझकर नहीं है तो डॉक्टर या डायटीशियन से बात करें।',

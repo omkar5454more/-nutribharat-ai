@@ -206,6 +206,13 @@ export const en = {
   'prog.streakDays': '{n} days',
   'prog.streakDay': '{n} day',
   'prog.target': 'Daily target',
+
+  // ---- install as an app (PWA)
+  'pwa.title': 'Install on your phone',
+  'pwa.android': 'Add NutriBharat AI to your home screen so it opens like an app.',
+  'pwa.install': 'Install app',
+  'pwa.ios': 'On iPhone: tap the Share button in Safari, then “Add to Home Screen”.',
+  'pwa.installed': 'Installed — you are using the app.',
   'prog.calories7': 'Calories, last 7 days',
   'prog.seeMeals': 'See all meals',
   'advice.losing_too_fast': 'You are losing weight faster than about 1% of your body weight per week. That is quicker than is generally advised. Please eat enough, and talk to a doctor or dietitian if this is not intended.',

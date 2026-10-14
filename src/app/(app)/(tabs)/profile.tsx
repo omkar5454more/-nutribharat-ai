@@ -5,6 +5,7 @@ import { Alert, Platform, Text } from 'react-native';
 import { LanguagePicker, Notes } from '@/components/common';
 import { Button, Card, H1, H2, Muted, Notice, Screen } from '@/components/ui';
 import { useT, type Key } from '@/i18n';
+import { useInstall } from '@/lib/pwa';
 import { ageFrom, targetsFor, useProfile } from '@/lib/data';
 import { supabase } from '@/lib/supabase';
 import { useSession } from '@/state/session';
@@ -17,6 +18,7 @@ export default function Profile() {
   const p = useProfile(session?.user.id).data!;
   const tg = targetsFor(p);
   const [error, setError] = useState('');
+  const install = useInstall();
 
   async function signOut() {
     await supabase.auth.signOut();
@@ -54,6 +56,21 @@ export default function Profile() {
         </Muted>
         <Notes notes={tg.notes} />
       </Card>
+      {install.show ? (
+        <Card>
+          <H2>{t('pwa.title')}</H2>
+          {install.canPrompt ? (
+            <>
+              <Muted>{t('pwa.android')}</Muted>
+              <Button title={t('pwa.install')} onPress={install.install} />
+            </>
+          ) : install.isIos ? (
+            <Muted>{t('pwa.ios')}</Muted>
+          ) : (
+            <Muted>{t('pwa.android')}</Muted>
+          )}
+        </Card>
+      ) : null}
       <H2>{t('common.language')}</H2>
       <LanguagePicker />
       <Button title={t('prof.edit')} variant="secondary" onPress={() => router.push('/edit-profile')} />

@@ -44,5 +44,6 @@ yarn-error.*
 .env
 .env.*
 !.env.example
+!.env.production
 supabase/.temp/
 supabase/functions/.env
