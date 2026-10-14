@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { Linking, View } from 'react-native';
 import { FOLLOW_UP_DELAYS_MIN, SYMPTOM_TYPES, screenGeneral, screenHeadache, type HeadacheAnswers, type Screening, type SymptomType } from '@/core/health/symptoms';
 import { fmtMinute } from '@/core/routine';
-import { Button, Card, Chips, H1, H2, MultiChips, Muted, Notice, Screen } from '@/components/ui';
+import { Button, Card, Chips, Field, H1, H2, MultiChips, Muted, Notice, Screen } from '@/components/ui';
 import { useT, type Key } from '@/i18n';
 import { createCheckIn, logSafetyEvent, useNotifPrefs } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
@@ -29,6 +29,7 @@ export default function CheckIn() {
   const [severity, setSeverity] = useState(5);
   const [answers, setAnswers] = useState<Q[]>([]);
   const [danger, setDanger] = useState(false);
+  const [label, setLabel] = useState('');
   const [result, setResult] = useState<Screening | null>(null);
   const [follow, setFollow] = useState<number | 'no'>('no');
   const [saved, setSaved] = useState('');
@@ -49,7 +50,7 @@ export default function CheckIn() {
     try {
       const delay = follow === 'no' ? null : (follow as (typeof FOLLOW_UP_DELAYS_MIN)[number]);
       const quiet = prefs.data?.quiet ?? null;
-      await createCheckIn(ctx.uid!, ctx.memberId, { type, severity, screening: result!, followDelayMin: delay, quiet });
+      await createCheckIn(ctx.uid!, ctx.memberId, { type, severity, screening: result!, followDelayMin: delay, quiet, customLabel: label.trim() || undefined });
       await qc.invalidateQueries({ queryKey: ['symptoms'] });
       await qc.invalidateQueries({ queryKey: ['followups'] });
       const due = delay && result === 'usual' ? Date.now() + delay * 60000 : 0;
@@ -71,7 +72,10 @@ export default function CheckIn() {
           {type === 'headache' ? (
             <MultiChips options={HEADACHE_QS.map((q) => ({ value: q, label: t(`h4.ci.q.${q}` as Key) }))} values={answers} onToggle={toggle} />
           ) : (
-            <MultiChips options={[{ value: 'danger', label: t('h4.ci.q.danger') }]} values={danger ? ['danger'] : []} onToggle={() => setDanger((d) => !d)} />
+            <>
+              {type === 'other' ? <Field label={t('h4.ci.customLabel')} value={label} onChangeText={setLabel} maxLength={60} /> : null}
+              <MultiChips options={[{ value: 'danger', label: t(type === 'digestive' ? 'h4.ci.q.dangerDigestive' : 'h4.ci.q.danger') }]} values={danger ? ['danger'] : []} onToggle={() => setDanger((d) => !d)} />
+            </>
           )}
           <Button title={t('h4.ci.continue')} onPress={screen} />
         </>

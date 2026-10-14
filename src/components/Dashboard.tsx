@@ -8,7 +8,9 @@ import { buildGymPlan, sessionFor } from '@/core/gym';
 import { planDay, type DietPref } from '@/core/planner';
 import { useFoodLabel, useT, type Key } from '@/i18n';
 import { GLASS_ML, addWater, startOfDay, targetsFor, useMeals, type MealType } from '@/lib/data';
-import { useGymPrefs } from '@/lib/health';
+import { saveMood, useGymPrefs, useMoods } from '@/lib/health';
+import { useDayRecords } from '@/lib/reports';
+import { DotRow } from './Charts';
 import { useHealthContext } from '@/lib/healthCtx';
 import { colors, radius, space } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
@@ -184,39 +186,75 @@ export function ForYou() {
   );
 }
 
-const MOODS: { e: string; key: 'great' | 'good' | 'okay' | 'low' | 'bad'; bg: string }[] = [
-  { e: '😄', key: 'great', bg: '#D9F0E3' }, { e: '🙂', key: 'good', bg: '#E3F0D9' }, { e: '😐', key: 'okay', bg: '#FDE9C9' }, { e: '😔', key: 'low', bg: '#F9D8E3' }, { e: '😣', key: 'bad', bg: '#F7CFCF' },
+const MOODS: { e: string; key: 'great' | 'good' | 'okay' | 'low' | 'bad'; bg: string; v: number }[] = [
+  { e: '😄', key: 'great', bg: '#D9F0E3', v: 5 }, { e: '🙂', key: 'good', bg: '#E3F0D9', v: 4 }, { e: '😐', key: 'okay', bg: '#FDE9C9', v: 3 }, { e: '😔', key: 'low', bg: '#F9D8E3', v: 2 }, { e: '😣', key: 'bad', bg: '#F7CFCF', v: 1 },
 ];
 
-/** A friendly mood tap. It only answers kindly and, for a low mood, offers the check-in; it saves nothing by itself. */
+/** A friendly daily mood tap, saved once per day (tap again to change). Low moods gently offer a check-in. Shows the last 7 days. */
 export function MoodRow() {
   const t = useT();
   const router = useRouter();
+  const qc = useQueryClient();
+  const ctx = useHealthContext();
+  const today = new Date();
+  const key = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const weekAgo = new Date(today.getTime() - 6 * 86400000);
+  const moods = useMoods(ctx.uid, ctx.memberId, key(weekAgo));
   const [picked, setPicked] = useState<(typeof MOODS)[number]['key'] | null>(null);
+  const saved = (moods.data ?? []).find((m) => m.date === key(today));
+  const current = picked ?? MOODS.find((m) => m.v === saved?.mood)?.key ?? null;
+
+  async function choose(m: (typeof MOODS)[number]) {
+    setPicked(m.key);
+    try { await saveMood(ctx.uid!, ctx.memberId, key(today), m.v); await qc.invalidateQueries({ queryKey: ['moods'] }); } catch { /* the kind reply still shows */ }
+  }
+  const week = Array.from({ length: 7 }, (_, i) => { const d = new Date(today.getTime() - (6 - i) * 86400000); const v = (moods.data ?? []).find((x) => x.date === key(d))?.mood; return { label: String(d.getDate()), emoji: v ? MOODS.find((m) => m.v === v)!.e : null }; });
   return (
     <View style={{ gap: 10 }}>
       <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>{t('h4.mood.title')}</Text>
       <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
         {MOODS.map((m) => {
-          const on = picked === m.key;
+          const on = current === m.key;
           return (
-            <PressScale key={m.key} onPress={() => setPicked(m.key)} accessibilityRole="button" accessibilityLabel={`mood ${m.key}`} scaleTo={0.85}
-              style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: on ? m.bg : '#fff', borderWidth: on ? 2 : 0, borderColor: '#5B4FA8', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(60,50,120,0.08)' } as object}>
-              <Text style={{ fontSize: on ? 30 : 26 }}>{m.e}</Text>
+            <PressScale key={m.key} onPress={() => choose(m)} accessibilityRole="button" accessibilityLabel={`mood ${m.key}`} scaleTo={0.85}
+              style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: on ? m.bg : '#fff', borderWidth: on ? 2 : 0, borderColor: '#5B4FA8', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(60,50,120,0.08)' } as object}>
+              <Text style={{ fontSize: on ? 28 : 24 }}>{m.e}</Text>
             </PressScale>
           );
         })}
       </View>
-      {picked ? (
+      {current ? (
         <FadeIn y={6}>
           <View style={{ backgroundColor: '#fff', borderRadius: radius.md, padding: 12, gap: 8 }}>
-            <Text style={{ color: colors.text }}>{t(`h4.mood.${picked}` as Key)}</Text>
-            {picked === 'low' || picked === 'bad' ? (
+            <Text style={{ color: colors.text }}>{t(`h4.mood.${current}` as Key)}</Text>
+            {current === 'low' || current === 'bad' ? (
               <Pressable onPress={() => router.push({ pathname: '/check-in', params: { type: 'stress' } })} accessibilityRole="button"><Text style={{ color: colors.primaryDark, fontWeight: '700' }}>{t('h4.ci.title')} →</Text></Pressable>
             ) : null}
           </View>
         </FadeIn>
       ) : null}
+      <View style={{ backgroundColor: '#fff', borderRadius: radius.md, padding: 10, gap: 4 }}>
+        <Text style={{ color: colors.muted, fontSize: 12, fontWeight: '700' }}>{t('h4.mood.week')}</Text>
+        <DotRow items={week} />
+      </View>
+    </View>
+  );
+}
+
+/** "Today at a glance": a short, personal summary and one gentle suggestion based on the day so far. */
+export function TodaySummary() {
+  const t = useT();
+  const ctx = useHealthContext();
+  const r = useDayRecords(ctx.uid, ctx.memberId, 1);
+  const goal = ctx.profile ? targetsFor(ctx.profile).water_ml : 2000;
+  const d = r.days[0];
+  if (!d) return null;
+  const tip = hour() >= 14 && (d.waterMl ?? 0) < goal * 0.5 ? 'water' : hour() >= 12 && d.mealsLogged === 0 ? 'meal' : hour() >= 17 && !d.workoutDone && (d.steps ?? 0) < 4000 ? 'walk' : 'good';
+  return (
+    <View style={{ backgroundColor: '#fff', borderRadius: radius.lg, padding: 14, gap: 6, boxShadow: '0 6px 20px rgba(60,50,120,0.08)' } as object}>
+      <Text style={{ fontSize: 16, fontWeight: '800', color: colors.text }}>{t('h4.ds.title')}</Text>
+      <Text style={{ color: colors.muted }}>{t('h4.ds.line', { meals: d.mealsLogged, water: d.waterMl ?? 0, pct: Math.round(Math.min(100, ((d.waterMl ?? 0) / goal) * 100)) })}</Text>
+      <Text style={{ color: colors.text, fontWeight: '600' }}>{t(`h4.ds.tip.${tip}` as Key)}</Text>
     </View>
   );
 }

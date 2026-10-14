@@ -4,8 +4,8 @@
  * All thresholds and wording need review by a clinician before real-world use.
  */
 
-export type SymptomType = 'headache' | 'fatigue' | 'menstrual' | 'stress' | 'sleep' | 'other';
-export const SYMPTOM_TYPES: SymptomType[] = ['headache', 'fatigue', 'menstrual', 'stress', 'sleep', 'other'];
+export type SymptomType = 'headache' | 'fatigue' | 'menstrual' | 'stress' | 'sleep' | 'digestive' | 'other';
+export const SYMPTOM_TYPES: SymptomType[] = ['headache', 'fatigue', 'menstrual', 'stress', 'sleep', 'digestive', 'other'];
 
 /** Yes/no answers to the screening questions. Anything the person leaves unanswered counts as "no". */
 export type HeadacheAnswers = {

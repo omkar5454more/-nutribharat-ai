@@ -242,3 +242,39 @@ describe('gym (migration 0006)', () => {
     expect(await fails(H, `insert into workout_logs (user_id, member_id, workout_date, session_key, status) values ('${H}', gen_random_uuid(), '2026-10-14', 'x', 'done')`)).toBe(true);
   });
 });
+
+
+describe('care v2 (migration 0007)', () => {
+  const M = '77777777-7777-7777-7777-777777777777';
+  const N = '88888888-8888-8888-8888-888888888888';
+  it('digestive symptoms and custom labels work; unknown types still fail', async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${M}', 'm@x.com'), ('${N}', 'n@x.com');`);
+    await consent(M);
+    await as(M, `insert into symptom_logs (user_id, symptom_type, severity, screening, custom_label) values ('${M}', 'digestive', 4, 'usual', 'Bloating')`);
+    expect(await fails(M, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${M}', 'cough', 4, 'usual')`)).toBe(true);
+    expect(await fails(M, `insert into symptom_logs (user_id, symptom_type, severity, screening, custom_label) values ('${M}', 'other', 4, 'usual', '')`)).toBe(true);
+  });
+  it('mood: one per day, range 1-5, private, not consent-gated', async () => {
+    await as(N, `insert into mood_logs (user_id, logged_on, mood) values ('${N}', '2026-10-14', 4)`);
+    expect(await fails(N, `insert into mood_logs (user_id, logged_on, mood) values ('${N}', '2026-10-14', 3)`)).toBe(true);
+    expect(await fails(N, `insert into mood_logs (user_id, logged_on, mood) values ('${N}', '2026-10-15', 6)`)).toBe(true);
+    expect((await as(M, `select * from mood_logs`)).rows).toEqual([]);
+  });
+  it('cycle diary needs consent, valid dates, and is private', async () => {
+    expect(await fails(N, `insert into cycle_logs (user_id, start_date) values ('${N}', '2026-10-01')`)).toBe(true);
+    await as(M, `insert into cycle_logs (user_id, start_date, end_date, flow, pain) values ('${M}', '2026-10-01', '2026-10-05', 'medium', 3)`);
+    expect(await fails(M, `insert into cycle_logs (user_id, start_date, end_date) values ('${M}', '2026-11-01', '2026-10-30')`)).toBe(true);
+    expect(await fails(M, `insert into cycle_logs (user_id, start_date) values ('${M}', '2026-10-01')`)).toBe(true);
+    expect(await fails(M, `insert into cycle_logs (user_id, start_date, flow) values ('${M}', '2026-11-02', 'extreme')`)).toBe(true);
+    expect((await as(N, `select * from cycle_logs`)).rows).toEqual([]);
+  });
+  it('favourites are unique and private', async () => {
+    await as(N, `insert into favorite_foods (user_id, food_id) values ('${N}', 'roti')`);
+    expect(await fails(N, `insert into favorite_foods (user_id, food_id) values ('${N}', 'roti')`)).toBe(true);
+    expect((await as(M, `select * from favorite_foods`)).rows).toEqual([]);
+  });
+  it('delete my health data removes cycle logs too', async () => {
+    await as(M, `select delete_my_health_data()`);
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from cycle_logs where user_id = '${M}'`)).rows[0].n).toBe(0);
+  });
+});

@@ -77,6 +77,9 @@ export default function Profile() {
       <FamilyLink />
       <Button title={t('h4.prof.health')} variant="secondary" onPress={() => router.push('/health')} />
       <Button title={t('h4.prof.routine')} variant="secondary" onPress={() => router.push('/routine-settings')} />
+      <Button title={t('h4.prof.journey')} variant="secondary" onPress={() => router.push('/journey')} />
+      <Button title={t('h4.prof.reports')} variant="secondary" onPress={() => router.push('/report')} />
+      <Button title={t('h4.prof.women')} variant="secondary" onPress={() => router.push('/womens')} />
       <Button title={t('h4.prof.gym')} variant="secondary" onPress={() => router.push('/gym')} />
       <Button title={t('h4.prof.flex')} variant="secondary" onPress={() => router.push('/flex')} />
       <Button title={t('prof.edit')} variant="secondary" onPress={() => router.push('/edit-profile')} />

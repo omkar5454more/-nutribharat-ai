@@ -97,7 +97,7 @@ export function excludedByAllergies(allergies: string[]): { foods: Set<string>; 
 }
 
 // ---------------------------------------------------------------- diet filter
-const dietAllows = (diet: DietPref, food: Food): boolean => {
+export const dietAllows = (diet: DietPref, food: Food): boolean => {
   switch (diet) {
     case 'vegan': return food.diet === 'vegan';
     case 'veg':

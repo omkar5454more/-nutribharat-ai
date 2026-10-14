@@ -389,9 +389,9 @@ export function usePendingFollowUps(uid: string | undefined) {
 }
 
 /** Save a check-in. A follow-up is scheduled ONLY when the person asked for one and the safety screen did not call for care. */
-export async function createCheckIn(uid: string, memberId: string | null, c: { type: SymptomType; severity: number; screening: Screening; triggers?: string[]; associated?: string[]; note?: string; followDelayMin?: (typeof FOLLOW_UP_DELAYS_MIN)[number] | null; quiet: QuietHours }): Promise<string> {
-  const ins = await supabase.from('symptom_logs').insert({
-    user_id: uid, member_id: memberId, symptom_type: c.type, severity: c.severity, screening: c.screening,
+export async function createCheckIn(uid: string, memberId: string | null, c: { type: SymptomType; severity: number; screening: Screening; triggers?: string[]; associated?: string[]; note?: string; followDelayMin?: (typeof FOLLOW_UP_DELAYS_MIN)[number] | null; quiet: QuietHours; customLabel?: string }): Promise<string> {
+  const ins = await supabase.from('symptom_logs').insert({ custom_label: c.customLabel?.slice(0, 60) ?? null,
+    user_id: uid, member_id: memberId, started_at: new Date().toISOString(), symptom_type: c.type, severity: c.severity, screening: c.screening,
     triggers: c.triggers ?? [], associated: c.associated ?? [], note: c.note?.slice(0, 500) ?? null, status: 'open',
   }).select('id').single();
   must(ins.error);
@@ -498,4 +498,80 @@ export async function setWorkoutStatus(uid: string, memberId: string | null, dat
     const { error } = await supabase.from('workout_logs').insert({ user_id: uid, member_id: memberId, workout_date: date, session_key: key, status });
     must(error);
   }
+}
+
+// ---------------------------------------------------------------- mood, cycle diary, favourite foods
+export type MoodPoint = { date: string; mood: number };
+export function useMoods(uid: string | undefined, memberId: string | null, fromDate: string) {
+  return useQuery({
+    queryKey: ['moods', uid, memberId, fromDate],
+    enabled: !!uid,
+    queryFn: async (): Promise<MoodPoint[]> => {
+      const { data, error } = await (scoped(supabase.from('mood_logs').select('*').eq('user_id', uid!).gte('logged_on', fromDate) as any, memberId) as any);
+      must(error);
+      return (data ?? []).map((r: any) => ({ date: r.logged_on, mood: r.mood }));
+    },
+  });
+}
+/** One mood per person per day: tapping again replaces it. */
+export async function saveMood(uid: string, memberId: string | null, date: string, mood: number) {
+  const del = await (scoped(supabase.from('mood_logs').delete().eq('user_id', uid).eq('logged_on', date) as any, memberId) as any);
+  must(del.error);
+  const { error } = await supabase.from('mood_logs').insert({ user_id: uid, member_id: memberId, logged_on: date, mood });
+  must(error);
+}
+
+export type CycleRow = { id: string; start: string; end: string | null; flow: 'light' | 'medium' | 'heavy' | null; pain: number | null };
+export function useCycles(uid: string | undefined, memberId: string | null) {
+  return useQuery({
+    queryKey: ['cycles', uid, memberId],
+    enabled: !!uid,
+    queryFn: async (): Promise<CycleRow[]> => {
+      const { data, error } = await (scoped(supabase.from('cycle_logs').select('*').eq('user_id', uid!) as any, memberId) as any).order('start_date', { ascending: false }).limit(24);
+      must(error);
+      return (data ?? []).map((r: any) => ({ id: r.id, start: r.start_date, end: r.end_date ?? null, flow: r.flow ?? null, pain: r.pain ?? null }));
+    },
+  });
+}
+export async function addCycle(uid: string, memberId: string | null, c: { start: string; end?: string | null; flow?: string | null; pain?: number | null }) {
+  const { error } = await supabase.from('cycle_logs').insert({ user_id: uid, member_id: memberId, start_date: c.start, end_date: c.end ?? null, flow: c.flow ?? null, pain: c.pain ?? null });
+  must(error);
+}
+export async function deleteCycle(id: string) {
+  const { error } = await supabase.from('cycle_logs').delete().eq('id', id);
+  must(error);
+}
+
+export function useFavorites(uid: string | undefined, memberId: string | null) {
+  return useQuery({
+    queryKey: ['favorites', uid, memberId],
+    enabled: !!uid,
+    queryFn: async (): Promise<string[]> => {
+      const { data, error } = await (scoped(supabase.from('favorite_foods').select('*').eq('user_id', uid!) as any, memberId) as any);
+      must(error);
+      return (data ?? []).map((r: any) => r.food_id);
+    },
+  });
+}
+export async function toggleFavorite(uid: string, memberId: string | null, foodId: string, on: boolean) {
+  if (on) {
+    const { error } = await supabase.from('favorite_foods').insert({ user_id: uid, member_id: memberId, food_id: foodId });
+    must(error);
+  } else {
+    const { error } = await (scoped(supabase.from('favorite_foods').delete().eq('user_id', uid).eq('food_id', foodId) as any, memberId) as any);
+    must(error);
+  }
+}
+
+/** Symptom logs for charts (last 60 days), with the person's own label for "other". */
+export function useSymptomHistory(uid: string | undefined, memberId: string | null, fromDate: string) {
+  return useQuery({
+    queryKey: ['symptom-history', uid, memberId, fromDate],
+    enabled: !!uid,
+    queryFn: async (): Promise<{ id: string; date: string; type: SymptomType; severity: number; label: string | null; status: string }[]> => {
+      const { data, error } = await (scoped(supabase.from('symptom_logs').select('*').eq('user_id', uid!).gte('started_at', fromDate) as any, memberId) as any).order('started_at', { ascending: false });
+      must(error);
+      return (data ?? []).map((r: any) => ({ id: r.id, date: (() => { const d = new Date(r.started_at); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; })(), type: r.symptom_type, severity: r.severity, label: r.custom_label ?? null, status: r.status }));
+    },
+  });
 }

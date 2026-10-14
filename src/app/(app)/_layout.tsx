@@ -30,6 +30,11 @@ export default function AppLayout() {
       <Stack.Screen name="check-in" options={{ title: t('h4.ci.title') }} />
       <Stack.Screen name="comfort" options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
       <Stack.Screen name="gym" options={{ title: t('h4.gym.title') }} />
+      <Stack.Screen name="symptoms" options={{ title: t('h4.sh.title') }} />
+      <Stack.Screen name="womens" options={{ title: t('h4.wh.title') }} />
+      <Stack.Screen name="week-plan" options={{ title: t('h4.wp.title') }} />
+      <Stack.Screen name="report" options={{ title: t('h4.rp.title') }} />
+      <Stack.Screen name="journey" options={{ title: t('h4.jy.title') }} />
       <Stack.Screen name="setup" options={{ title: t('app.name'), headerBackVisible: false, gestureEnabled: false }} />
     </Stack>
     </>

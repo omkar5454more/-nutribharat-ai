@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { Card, Field, Muted, Screen } from '@/components/ui';
 import { searchFoods } from '@/core/match';
+import { VoiceButton } from '@/components/VoiceButton';
 import { gramsFor } from '@/core/nutrition';
 import type { Food } from '@/core/types';
 import { FOOD_NAMES } from '@/i18n/foodNames';
@@ -39,6 +40,7 @@ export default function AddFood() {
   return (
     <Screen>
       <Field label={t('add.search')} value={query} onChangeText={setQuery} placeholder={t('add.placeholder')} autoFocus autoCapitalize="none" />
+      <VoiceButton onText={(x) => setQuery(x.replace(/[.,]/g, ''))} />
       {results.length === 0 ? <Muted>{t('add.none')}</Muted> : null}
       {results.map((f) => (
         <Pressable key={f.id} onPress={() => choose(f)} accessibilityRole="button" accessibilityLabel={label(f.id, f.name)}>

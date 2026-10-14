@@ -7,9 +7,9 @@ import { FOOD_BY_ID } from '@/core/foods';
 import { nutrientsFor } from '@/core/nutrition';
 
 type Row = Record<string, any>;
-const HEALTH_TABLES = ['health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events', 'symptom_logs', 'symptom_followups', 'notification_preferences', 'achievements', 'gym_prefs', 'workout_logs'] as const;
+const HEALTH_TABLES = ['health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events', 'symptom_logs', 'symptom_followups', 'notification_preferences', 'achievements', 'gym_prefs', 'workout_logs', 'mood_logs', 'cycle_logs', 'favorite_foods'] as const;
 type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; members: Row[]; sleep_logs: Row[]; activity_logs: Row[]; seq: number } & Record<(typeof HEALTH_TABLES)[number], Row[]>;
-const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_reminders', 'monthly_flex_days', 'health_consents', 'user_health_conditions', 'recommendation_safety_events', 'symptom_logs', 'achievements', 'gym_prefs', 'workout_logs'] as const;
+const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_reminders', 'monthly_flex_days', 'health_consents', 'user_health_conditions', 'recommendation_safety_events', 'symptom_logs', 'achievements', 'gym_prefs', 'workout_logs', 'mood_logs', 'cycle_logs', 'favorite_foods'] as const;
 export type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
 
 const KEY = 'nutribharat.demo.db';
@@ -204,7 +204,7 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
     }
 
     if (path.endsWith('/rest/v1/rpc/delete_my_health_data')) {
-      for (const t of ['symptom_logs', 'condition_triggers', 'clinician_instructions', 'health_measurement_logs', 'user_health_conditions', 'recommendation_safety_events', 'health_consents'] as const) db[t] = db[t].filter((r) => r.user_id !== user.id);
+      for (const t of ['symptom_logs', 'cycle_logs', 'mood_logs', 'condition_triggers', 'clinician_instructions', 'health_measurement_logs', 'user_health_conditions', 'recommendation_safety_events', 'health_consents'] as const) db[t] = db[t].filter((r) => r.user_id !== user.id);
       db.condition_details = db.condition_details.filter((d) => d.user_id !== user.id);
       db.symptom_followups = db.symptom_followups.filter((f) => f.user_id !== user.id);
       db.routine_reminders = db.routine_reminders.filter((r) => !(r.user_id === user.id && r.kind === 'medication'));

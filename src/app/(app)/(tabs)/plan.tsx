@@ -56,6 +56,7 @@ export default function Plan() {
         options={[{ value: 'any' as const, label: t('plan.budgetAny') }, ...BUDGET_OPTIONS.map((b) => ({ value: `${b}` as `${typeof b}`, label: `₹${b}` }))]}
       />
       <Button title={t('plan.another')} variant="secondary" onPress={() => setSeed((s) => s + 1)} />
+      <Button title={t('h4.plan.week')} variant="secondary" onPress={() => router.push('/week-plan')} />
 
       <Notes notes={targets.notes} />
       <HealthNotes constraints={health.constraints} />

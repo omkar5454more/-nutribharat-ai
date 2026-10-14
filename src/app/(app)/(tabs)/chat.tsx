@@ -13,7 +13,8 @@ import { logSafetyEvent } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
 import { Linking } from 'react-native';
 import { Button } from '@/components/ui';
-import { CheckInHistory, FeelingCard, FollowUpCard } from '@/components/CareCards';
+import { VoiceButton } from '@/components/VoiceButton';
+import { CheckInHistory, FeelingCard, FollowUpCard, HistoryLink } from '@/components/CareCards';
 
 const MAX_LEN = 1000;
 /** A message handled on the device (emergency / unsafe request). It, and the reply to it, are never sent to the AI. */
@@ -117,6 +118,7 @@ export default function Chat() {
           {health.consents.ai_processing && health.consents.condition_tracking && health.health.conditions.length ? <Muted style={{ fontSize: 12 }}>{t('h4.chat.sharing')}</Muted> : null}
           {error ? <Notice>{error}</Notice> : null}
           {messages.length === 0 ? <CheckInHistory /> : null}
+          {messages.length === 0 ? <HistoryLink /> : null}
           <Muted style={{ fontSize: 12 }}>{t('chat.disclaimer')}</Muted>
         </ScrollView>
         <View style={{ flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: '#fff' }}>
@@ -131,6 +133,7 @@ export default function Chat() {
             onSubmitEditing={() => send(text)}
             style={{ flex: 1, minHeight: 46, maxHeight: 110, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, paddingHorizontal: 12, paddingVertical: 10, fontSize: 16, color: colors.text }}
           />
+          <VoiceButton onText={(x) => setText((cur) => (cur ? `${cur} ${x}` : x))} />
           <Pressable
             onPress={() => send(text)}
             disabled={busy || !text.trim()}

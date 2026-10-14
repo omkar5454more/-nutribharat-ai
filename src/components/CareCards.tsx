@@ -113,3 +113,9 @@ export function CheckInHistory() {
     </Card>
   );
 }
+
+export function HistoryLink() {
+  const t = useT();
+  const router = useRouter();
+  return <Button title={t('h4.sh.open')} variant="secondary" onPress={() => router.push('/symptoms')} />;
+}
