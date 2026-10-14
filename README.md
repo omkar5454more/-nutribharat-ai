@@ -29,6 +29,8 @@ Any email and password work. Everything runs in the browser against a built-in f
 4. *Authentication → Providers → Email*: keep "Confirm email" on for a real launch (the app handles both).
 
 ### 2. AI functions (Supabase Edge Functions)
+**Status for project `cqjfvcvweyazqlzqdcka`:** both functions are already deployed (via the Supabase dashboard editor, with *Verify JWT with legacy secret* switched off because the functions check the signed-in user themselves). **Still to do by hand: add the secret `ANTHROPIC_API_KEY`** (Dashboard → Edge Functions → Secrets). Until then food-photo scanning and chat answer "unavailable"; everything else works. After changing function code, re-deploy with the CLI below or paste the new code into the dashboard editor.
+
 Needs the Supabase CLI (`npm i -g supabase`, or use `npx supabase`):
 ```
 npx supabase login
