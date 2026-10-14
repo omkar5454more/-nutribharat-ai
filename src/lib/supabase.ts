@@ -6,6 +6,13 @@ import { createDemoFetch, resetDemo } from './demoBackend';
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
 const key = process.env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
+/**
+ * True when this page was opened from a password-reset email link. Checked right here, before the Supabase client starts and removes the
+ * tokens from the address bar — the library's own PASSWORD_RECOVERY event fires too early for React to hear it.
+ */
+export const openedFromRecoveryLink =
+  Platform.OS === 'web' && typeof window !== 'undefined' && /[#&?]type=recovery(&|$)/.test(`${window.location.hash}${window.location.search}`);
+
 /** Demo build (`npm run demo`): the whole app runs against an in-browser fake backend. Never set this in a real deployment. */
 export const isDemo = process.env.EXPO_PUBLIC_DEMO === '1';
 

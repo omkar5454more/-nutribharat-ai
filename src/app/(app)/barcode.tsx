@@ -1,5 +1,5 @@
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useRef, useState } from 'react';
 import { ActivityIndicator, Text, View } from 'react-native';
 import { Button, Card, Field, H2, Muted, Notice, Screen } from '@/components/ui';
@@ -16,6 +16,7 @@ type Stage = { name: 'start' } | { name: 'searching' } | { name: 'found'; code: 
 export default function Barcode() {
   const t = useT();
   const router = useRouter();
+  const { next } = useLocalSearchParams<{ next?: string }>();
   const addItem = useDraft((s) => s.addItem);
   const [permission, requestPermission] = useCameraPermissions();
   const [stage, setStage] = useState<Stage>({ name: 'start' });
@@ -54,11 +55,13 @@ export default function Barcode() {
   }
 
   const amount = Number(grams.replace(',', '.'));
+  // opened from Today: continue to the review screen; opened from the review screen: just go back to it
+  const done = () => (next === 'review' ? router.replace('/review') : router.back());
 
   function addProduct(code: string, p: Product) {
     if (!(amount > 0 && amount <= 2000)) return setError(t('review.saveFail'));
     addItem(makeCustomItem(`pkg:${code}`, p.brand ? `${p.name} (${p.brand})` : p.name, p.per100g, Math.round(amount)));
-    router.back();
+    done();
   }
 
   function addLabel() {
@@ -66,7 +69,7 @@ export default function Barcode() {
     if (!r.success || !(amount > 0 && amount <= 2000)) return setError(t('bc.labelInvalid'));
     const { name, ...per100g } = r.data;
     addItem(makeCustomItem(`custom:${name.toLowerCase()}`, name, per100g, Math.round(amount)));
-    router.back();
+    done();
   }
 
   return (

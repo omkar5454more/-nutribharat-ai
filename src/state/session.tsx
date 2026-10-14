@@ -1,6 +1,6 @@
 import type { Session } from '@supabase/supabase-js';
 import { createContext, use, useEffect, useState, type PropsWithChildren } from 'react';
-import { supabase } from '@/lib/supabase';
+import { openedFromRecoveryLink, supabase } from '@/lib/supabase';
 
 type Ctx = {
   session: Session | null;
@@ -20,7 +20,7 @@ export function useSession() {
 export function SessionProvider({ children }: PropsWithChildren) {
   const [session, setSession] = useState<Session | null>(null);
   const [isLoading, setLoading] = useState(true);
-  const [recovery, setRecovery] = useState(false);
+  const [recovery, setRecovery] = useState(openedFromRecoveryLink);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {

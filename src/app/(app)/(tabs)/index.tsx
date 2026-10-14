@@ -75,7 +75,7 @@ export default function Today() {
       {targets.notes.length ? <Notes notes={targets.notes} /> : targets.seeProfessional ? <Notice>{t('note.generic_pro')}</Notice> : null}
 
       <Button title={t('today.scan')} onPress={() => router.push('/scan')} />
-      <Button title={t('today.barcode')} variant="secondary" onPress={() => { reset(); router.push('/barcode'); }} />
+      <Button title={t('today.barcode')} variant="secondary" onPress={() => { reset(); router.push({ pathname: '/barcode', params: { next: 'review' } }); }} />
       <Button
         title={t('today.addManual')}
         variant="secondary"

@@ -86,6 +86,13 @@ describe('demo backend: family members and wellness', () => {
     expect(none.json).toEqual([]);
   });
 
+  it('fills in the timestamp the real database would add (water logged without logged_at still shows up today)', async () => {
+    await signIn();
+    await call('POST', '/rest/v1/water_logs', { member_id: null, ml: 250 });
+    const from = new Date(2026, 9, 13).toISOString(), to = new Date(2026, 9, 14).toISOString();
+    expect((await call('GET', `/rest/v1/water_logs?member_id=is.null&logged_at=gte.${from}&logged_at=lt.${to}`)).json).toHaveLength(1);
+  });
+
   it('stores sleep and activity per person', async () => {
     await signIn();
     await call('POST', '/rest/v1/sleep_logs', { member_id: null, logged_on: '2026-10-13', hours: 7.5 });

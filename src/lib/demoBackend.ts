@@ -219,6 +219,8 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
       for (const row of list) {
         const r: Row = { ...row, user_id: table === 'profiles' || table === 'members' ? undefined : user.id };
         if (table === 'members') { r.created_at = now().toISOString(); r.owner_id = user.id; }
+        if (table === 'water_logs') r.logged_at = r.logged_at ?? now().toISOString();   // the real database fills these in
+        if (table === 'meals') r.eaten_at = r.eaten_at ?? now().toISOString();
         if (table === 'profiles') {
           const existing = db.profiles.find((p) => p.id === user.id);
           if (existing) Object.assign(existing, row, { id: user.id });
