@@ -85,3 +85,7 @@ Password-reset links and Google sign-in need extra setup for the APK (deep link 
 - **Steps / sleep** are entered by hand (a web app cannot read the phone's health data).
 - **Password reset** works in the web app (email link opens the "new password" screen). In an Android APK it needs a deep link — not built yet.
 - **Not built**: health-app integrations (Google Fit / Apple Health), subscriptions (need Play Store / App Store accounts), admin dashboard (needs a separate secure server), iOS App Store build, Android adaptive icon artwork.
+
+
+## AI provider
+The two edge functions use **Gemini** when the secret `GEMINI_API_KEY` is set (free key from aistudio.google.com/apikey; model via optional secret `GEMINI_MODEL`, default `gemini-2.5-flash`), otherwise **Anthropic** (`ANTHROPIC_API_KEY`). Set `AI_PROVIDER=anthropic` to force Anthropic. Note: Google's free tier may use submitted content to improve its products, so photos and the short health summary go to a provider with weaker privacy terms than a paid plan: review before real users, and see docs/HEALTH-COACH.md.

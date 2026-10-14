@@ -1,6 +1,6 @@
 // Supabase Edge Function (Deno): identifies the dishes in a meal photo and estimates their weight.
 // It does NOT return calories or nutrients — the app computes those from its own food table.
-// The Anthropic key lives only here, as a Supabase secret (ANTHROPIC_API_KEY); it is never shipped in the app.
+// The AI key lives only here, as a Supabase secret (GEMINI_API_KEY, or ANTHROPIC_API_KEY); it is never shipped in the app.
 import Anthropic from 'npm:@anthropic-ai/sdk';
 import { zodOutputFormat } from 'npm:@anthropic-ai/sdk/helpers/zod';
 import { createClient } from 'npm:@supabase/supabase-js@2';
@@ -26,6 +26,29 @@ List each separate dish or food item you can see, using the common Indian name (
 For every item estimate the weight in grams of the portion visible, and give a confidence from 0 to 1.
 Do NOT give calories or nutrients. If the image is not food, set is_food to false and return no items.
 Mention anything you cannot tell from a photo (oil, sugar, hidden ingredients) in "uncertain".`;
+
+
+// AI provider: Gemini (free tier) when GEMINI_API_KEY is set, otherwise Anthropic (ANTHROPIC_API_KEY). Set AI_PROVIDER=anthropic to force Anthropic.
+const GEMINI_KEY = Deno.env.get('GEMINI_API_KEY');
+const USE_GEMINI = !!GEMINI_KEY && (Deno.env.get('AI_PROVIDER') ?? 'gemini') !== 'anthropic';
+const GEMINI_MODEL = Deno.env.get('GEMINI_MODEL') ?? 'gemini-2.5-flash';
+
+async function callGemini(system: string, contents: unknown[], maxTokens: number, asJson: boolean): Promise<string> {
+  const generationConfig: Record<string, unknown> = { maxOutputTokens: maxTokens, temperature: 0.4 };
+  if (asJson) generationConfig.responseMimeType = 'application/json';
+  if (GEMINI_MODEL.includes('2.5')) generationConfig.thinkingConfig = { thinkingBudget: 0 };
+  const res = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + GEMINI_MODEL + ':generateContent', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-goog-api-key': GEMINI_KEY! },
+    body: JSON.stringify({ systemInstruction: { parts: [{ text: system }] }, contents, generationConfig }),
+  });
+  if (!res.ok) throw new Error('gemini ' + res.status + ' ' + (await res.text()).slice(0, 300));
+  const data = await res.json();
+  if (data.promptFeedback?.blockReason) throw new Error('blocked ' + data.promptFeedback.blockReason);
+  return (data.candidates?.[0]?.content?.parts ?? []).map((p: { text?: string }) => p.text ?? '').join('').trim();
+}
+
+const JSON_HINT = ' Reply with ONLY a JSON object of this shape: {"is_food": boolean, "items": [{"name": string, "estimated_grams": number, "confidence": number between 0 and 1, "notes": string (optional)}], "uncertain": string (optional)}.';
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*' } });
@@ -56,6 +79,16 @@ Deno.serve(async (req) => {
   await supabase.from('scan_usage').insert({ user_id: auth.user.id });
 
   try {
+    if (USE_GEMINI) {
+      const raw = await callGemini(
+        SYSTEM + JSON_HINT,
+        [{ role: 'user', parts: [{ inlineData: { mimeType: media, data: body.image_base64 } }, { text: 'What foods are in this photo?' }] }],
+        2000, true,
+      );
+      const parsedJson = Result.safeParse(JSON.parse(raw.replace(/^\x60{3}(?:json)?|\x60{3}$/g, '').trim()));
+      if (!parsedJson.success) return json({ error: 'The photo could not be analysed. Try another photo or add the food manually.' }, 422);
+      return json(parsedJson.data);
+    }
     const client = new Anthropic(); // reads ANTHROPIC_API_KEY
     const response = await client.messages.parse({
       model: MODEL,
