@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { BarChart } from '@/components/Charts';
+import { Mascot } from '@/components/Mascot';
 import { MemberSwitcher } from '@/components/MemberSwitcher';
 import { Badge, Button, Card, Chips, H1, H2, Muted, Screen } from '@/components/ui';
 import { dayKey } from '@/core/progress';
@@ -36,7 +37,7 @@ export default function Symptoms() {
       <MemberSwitcher />
       <Chips value={range} onChange={setRange} options={[{ value: '7', label: t('h4.sh.week') }, { value: '30', label: t('h4.sh.month') }]} />
       {logs.length === 0 ? (
-        <Card><Muted>{t('h4.sh.empty')}</Muted><Button title={t('h4.ci.headache')} onPress={() => router.push({ pathname: '/check-in', params: { type: 'headache' } })} /></Card>
+        <Card><View style={{ alignItems: 'center' }}><Mascot mood="sleepy" size={90} /></View><Muted>{t('h4.sh.empty')}</Muted><Button title={t('h4.ci.headache')} onPress={() => router.push({ pathname: '/check-in', params: { type: 'headache' } })} /></Card>
       ) : (
         <Card>
           <BarChart bars={series.map((p) => ({ label: p.date.slice(8), value: p.maxSeverity, color: p.maxSeverity >= 7 ? '#E0645C' : p.maxSeverity >= 4 ? '#F0A93B' : '#7C6FD0' }))} max={10} />

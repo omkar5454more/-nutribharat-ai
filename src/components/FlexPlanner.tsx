@@ -10,6 +10,7 @@ import { deleteFlexDay, saveFlexDay, setFlexStatus, useFlexDays, type FlexDayRow
 import { useHealthContext } from '@/lib/healthCtx';
 import { colors } from '@/lib/theme';
 import { Badge, Button, Card, Field, H2, MultiChips, Muted, Notice } from './ui';
+import { celebrate } from './Celebrate';
 
 void applyFlexToSlots;
 void tagsOf;
@@ -74,7 +75,7 @@ export function FlexPlanner({ onPlanned }: { onPlanned?: () => void }) {
             <Muted key={f.id}>{t('h4.flex.alt', { food: label(f.foodId!, FOOD_BY_ID[f.foodId!].name), list: flexAlternatives(f.foodId!).map((a) => label(a, FOOD_BY_ID[a].name)).join(', ') })}</Muted>
           ))}
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-            {current.status === 'planned' ? <Button title={t('h4.flex.enjoyed')} onPress={async () => { await setFlexStatus(current.id, 'done'); await refresh(); }} /> : <Badge label={current.status} />}
+            {current.status === 'planned' ? <Button title={t('h4.flex.enjoyed')} onPress={async () => { await setFlexStatus(current.id, 'done'); celebrate(t('h4.cel.flex')); await refresh(); }} /> : <Badge label={current.status} />}
             {current.status === 'planned' ? <Button title={t('h4.flex.notThisMonth')} variant="link" onPress={async () => { await setFlexStatus(current.id, 'skipped'); await refresh(); }} /> : null}
             <Button title={t('h4.remove')} variant="link" onPress={async () => { await deleteFlexDay(current.id); await refresh(); }} />
           </View>

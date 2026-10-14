@@ -278,3 +278,19 @@ describe('care v2 (migration 0007)', () => {
     expect((await db.query<{ n: number }>(`select count(*)::int as n from cycle_logs where user_id = '${M}'`)).rows[0].n).toBe(0);
   });
 });
+
+
+describe('care contacts (migration 0008)', () => {
+  const P = '99999999-9999-9999-9999-999999999999';
+  const Q = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+  it('valid number and confirmation required; private; unique per number', async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${P}', 'p@x.com'), ('${Q}', 'q@x.com');`);
+    await as(P, `insert into care_contacts (user_id, name, phone, told) values ('${P}', 'Ravi', '+919876543210', true)`);
+    expect(await fails(P, `insert into care_contacts (user_id, name, phone, told) values ('${P}', 'Ravi', '+919876543210', true)`)).toBe(true);
+    expect(await fails(P, `insert into care_contacts (user_id, name, phone, told) values ('${P}', 'X', '9876543210', true)`)).toBe(true);
+    expect(await fails(P, `insert into care_contacts (user_id, name, phone, told) values ('${P}', 'X', '+919876543211', false)`)).toBe(true);
+    expect(await fails(P, `insert into care_contacts (user_id, name, phone, told, relation) values ('${P}', 'X', '+919876543212', true, 'boss')`)).toBe(true);
+    expect((await as(Q, `select * from care_contacts`)).rows).toEqual([]);
+    expect(await fails(Q, `insert into care_contacts (user_id, name, phone, told) values ('${P}', 'Y', '+919876543213', true)`)).toBe(true);
+  });
+});

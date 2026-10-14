@@ -1,7 +1,7 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { Text, View } from 'react-native';
+import { Platform, Text, View } from 'react-native';
 import { adapt, dueNow, fmtMinute, generateRoutine, nextUp, progress, swapToLightWalk, type Activity, type ActivityKind, type Suggestion } from '@/core/routine';
 import { planDay, type DietPref } from '@/core/planner';
 import { useFoodLabel, useT, type Key } from '@/i18n';
@@ -10,7 +10,8 @@ import { FOOD_BY_ID } from '@/core/foods';
 import { targetsFor } from '@/lib/data';
 import { saveRoutine, setActivityStatus, updateActivity, useFlexDays, useRoutine, type StoredRoutine } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
-import { notificationsAllowed, showNotification } from '@/lib/notify';
+import { askNotificationPermission, notificationsAllowed, refreshNativePermission, scheduleDailyReminders, showNotification } from '@/lib/notify';
+import { celebrate } from './Celebrate';
 import { colors, radius, space } from '@/lib/theme';
 import { HealthNotes } from './HealthNotes';
 import { Icon, type IconName } from './icons';
@@ -45,6 +46,8 @@ export function RoutineView() {
   const notified = useRef(new Set<string>());
   const creating = useRef('');
   const [error, setError] = useState('');
+  const [perm, setPerm] = useState(false);
+  const lastPct = useRef(0);
 
   useEffect(() => { const id = setInterval(() => setNow(minuteNow()), 30000); return () => clearInterval(id); }, []);
 
@@ -107,6 +110,25 @@ export function RoutineView() {
   };
 
   const prog = progress(acts, status);
+
+  // phone (Android / iOS): real scheduled notifications for the reminders the person turned on; short generic text only
+  useEffect(() => {
+    if (Platform.OS === 'web' || !data) return;
+    refreshNativePermission().then((ok) => {
+      setPerm(ok);
+      if (!ok) return;
+      scheduleDailyReminders(acts.filter((a) => enabled.has(a.kind) && a.kind !== 'wake' && a.kind !== 'sleep').map((a) => ({
+        id: `${a.kind}-${a.start}`, hour: Math.floor(a.start / 60), minute: a.start % 60,
+        title: a.kind === 'medication' ? t('h4.routine.medication') : t('h4.notif.time', { what: activityTitle(t, a) }),
+      })));
+    });
+  }, [data, enabled]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // a small celebration the first time everything for the day is ticked off
+  useEffect(() => {
+    if (prog.total > 0 && prog.pct === 100 && lastPct.current < 100 && lastPct.current > 0) celebrate(t('h4.cel.routine'));
+    lastPct.current = prog.pct;
+  }, [prog.pct]); // eslint-disable-line react-hooks/exhaustive-deps
   const next = data ? nextUp(acts, status, now, wake) : null;
   const ideas: Suggestion[] = data ? adapt(acts, status, now, wake, ctx.constraints) : [];
 
@@ -212,7 +234,8 @@ export function RoutineView() {
             <Button title={t('h4.rt.regen')} variant="link" onPress={build} />
             <Button title={t('h4.rt.settings')} variant="link" onPress={() => router.push('/routine-settings')} />
           </View>
-          {!notificationsAllowed() ? <Muted>{t('h4.notif.note')}</Muted> : null}
+          {Platform.OS !== 'web' && !perm ? <Button title={t('h4.nt.enable')} variant="secondary" onPress={async () => setPerm(await askNotificationPermission())} /> : null}
+          {!notificationsAllowed() && Platform.OS === 'web' ? <Muted>{t('h4.notif.note')}</Muted> : <Muted>{t('h4.nt.note')}</Muted>}
         </>
       ) : (
         <Card>

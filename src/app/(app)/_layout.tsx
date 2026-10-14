@@ -2,6 +2,7 @@ import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useSetupPending } from '@/state/setup';
 import { FollowUpWatcher } from '@/components/CareCards';
+import { CelebrationLayer } from '@/components/Celebrate';
 import { useT } from '@/i18n';
 
 export default function AppLayout() {
@@ -14,6 +15,7 @@ export default function AppLayout() {
   return (
     <>
     <FollowUpWatcher />
+    <CelebrationLayer />
     <Stack screenOptions={{ headerTintColor: '#16693A', headerStyle: { backgroundColor: '#FAF8F3' } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="scan" options={{ title: t('scan.title') }} />
@@ -35,6 +37,7 @@ export default function AppLayout() {
       <Stack.Screen name="week-plan" options={{ title: t('h4.wp.title') }} />
       <Stack.Screen name="report" options={{ title: t('h4.rp.title') }} />
       <Stack.Screen name="journey" options={{ title: t('h4.jy.title') }} />
+      <Stack.Screen name="contacts" options={{ title: t('h4.ct.title') }} />
       <Stack.Screen name="setup" options={{ title: t('app.name'), headerBackVisible: false, gestureEnabled: false }} />
     </Stack>
     </>

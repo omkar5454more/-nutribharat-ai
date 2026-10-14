@@ -10,6 +10,9 @@ import { useHealthContext } from '@/lib/healthCtx';
 import { showNotification } from '@/lib/notify';
 import { colors } from '@/lib/theme';
 import { Card, Button, H2, Muted, Notice, Badge } from './ui';
+import { ContactAlert } from './ContactAlert';
+import { celebrate } from './Celebrate';
+import { cancelScheduled, scheduleOnce } from '@/lib/notify';
 
 /** "How are you feeling right now?" with one-tap entry points. Nothing is scheduled or saved until the person goes through the check-in. */
 export function FeelingCard() {
@@ -45,6 +48,9 @@ export function FollowUpCard() {
   async function answer(r: Response) {
     if (!due) return;
     const step = await answerFollowUp(ctx.uid!, due, r, prefs.data?.quiet ?? null);
+    cancelScheduled(`fu-${due.logId}`);
+    if (step.kind === 'check_again') scheduleOnce(`fu-${due.logId}`, t('h4.nt.followup'), step.follow.dueAt);
+    if (step.kind === 'celebrate') celebrate(t('h4.cel.better'));
     setReply({ text: t(`h4.ci.after.${step.kind === 'rescreen' ? 'worse' : step.kind}` as Key), urgent: step.kind === 'rescreen' });
     await qc.invalidateQueries({ queryKey: ['followups'] });
     await qc.invalidateQueries({ queryKey: ['symptoms'] });
@@ -55,6 +61,7 @@ export function FollowUpCard() {
       <>
         <Notice tone={reply.urgent ? 'urgent' : 'info'}>{reply.text}</Notice>
         {reply.urgent ? <Button title={t('h4.emergency.call')} variant="danger" onPress={() => { Linking.openURL('tel:112').catch(() => {}); }} /> : null}
+        {reply.urgent ? <ContactAlert kind="worse" /> : null}
       </>
     );
   }

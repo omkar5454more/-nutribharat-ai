@@ -9,6 +9,7 @@ import { saveMeal, useInvalidateMeals, type MealType } from '@/lib/data';
 import { colors } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
 import { useActive } from '@/lib/active';
+import { celebrate } from '@/components/Celebrate';
 import { ScanConsiderations } from '@/components/ScanConsiderations';
 
 const TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
@@ -34,6 +35,7 @@ export default function Review() {
     try {
       await saveMeal(uid!, memberId, d.mealType, d.items);
       invalidate();
+      celebrate(t('h4.cel.meal'));
       d.reset();
       router.dismissAll();
     } catch {

@@ -16,6 +16,7 @@ import { colors, radius, space } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
 import { Icon, type IconName } from './icons';
 import { FadeIn, PressScale } from './motion';
+import { Mascot } from './Mascot';
 
 const hour = () => new Date().getHours();
 const greetingKey = (): Key => (hour() < 12 ? 'h4.dash.morning' : hour() < 17 ? 'h4.dash.afternoon' : 'h4.dash.evening');
@@ -49,9 +50,7 @@ export function DashHeader({ name }: { name: string }) {
         </Pressable>
       </View>
       <View style={{ alignItems: 'center', gap: 6, marginTop: 6 }}>
-        <View style={{ width: 52, height: 52, borderRadius: 26, backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center', boxShadow: '0 6px 18px rgba(91,79,168,0.18)' } as object}>
-          <Icon name="heart" size={26} color="#E2557B" />
-        </View>
+        <Mascot mood="wave" size={92} />
         <Text style={{ color: '#6B6584', fontWeight: '600' }}>{t('h4.dash.enjoy')}</Text>
         <Text style={{ fontSize: 34, fontWeight: '800', color: '#1F1B3A', letterSpacing: -0.5 }} accessibilityRole="header">{t(greetingKey())}</Text>
         <Text style={{ color: '#4A4568', fontWeight: '600' }}>{name ? t('today.hello', { name }) : t('today.title')}</Text>

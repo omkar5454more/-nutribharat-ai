@@ -575,3 +575,25 @@ export function useSymptomHistory(uid: string | undefined, memberId: string | nu
     },
   });
 }
+
+// ---------------------------------------------------------------- care contacts
+export type ContactRow = { id: string; name: string; phone: string; relation: string; alertEmergency: boolean; alertWorse: boolean };
+export function useContacts(uid: string | undefined, memberId: string | null) {
+  return useQuery({
+    queryKey: ['contacts', uid, memberId],
+    enabled: !!uid,
+    queryFn: async (): Promise<ContactRow[]> => {
+      const { data, error } = await (scoped(supabase.from('care_contacts').select('*').eq('user_id', uid!) as any, memberId) as any).order('created_at', { ascending: true });
+      must(error);
+      return (data ?? []).map((r: any) => ({ id: r.id, name: r.name, phone: r.phone, relation: r.relation, alertEmergency: r.alert_emergency !== false, alertWorse: r.alert_worse !== false }));
+    },
+  });
+}
+export async function addContact(uid: string, memberId: string | null, c: { name: string; phone: string; relation: string }) {
+  const { error } = await supabase.from('care_contacts').insert({ user_id: uid, member_id: memberId, name: c.name.trim().slice(0, 60), phone: c.phone, relation: c.relation, told: true, alert_emergency: true, alert_worse: true });
+  must(error);
+}
+export async function deleteContact(id: string) {
+  const { error } = await supabase.from('care_contacts').delete().eq('id', id);
+  must(error);
+}

@@ -45,6 +45,12 @@
           "cameraPermission": "NutriBharat AI uses the camera to scan food barcodes.",
           "barcodeScannerEnabled": true
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1F8A4C"
+        }
       ]
     ],
     "scheme": "nutribharat",

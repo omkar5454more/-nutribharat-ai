@@ -13,6 +13,7 @@ import { logSafetyEvent } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
 import { Linking } from 'react-native';
 import { Button } from '@/components/ui';
+import { ContactAlert } from '@/components/ContactAlert';
 import { VoiceButton } from '@/components/VoiceButton';
 import { CheckInHistory, FeelingCard, FollowUpCard, HistoryLink } from '@/components/CareCards';
 
@@ -115,6 +116,7 @@ export default function Chat() {
             </View>
           ) : null}
           {emergency ? <Button title={t('h4.emergency.call')} variant="danger" onPress={() => { Linking.openURL('tel:112').catch(() => {}); }} /> : null}
+          {emergency ? <ContactAlert kind="emergency" /> : null}
           {health.consents.ai_processing && health.consents.condition_tracking && health.health.conditions.length ? <Muted style={{ fontSize: 12 }}>{t('h4.chat.sharing')}</Muted> : null}
           {error ? <Notice>{error}</Notice> : null}
           {messages.length === 0 ? <CheckInHistory /> : null}

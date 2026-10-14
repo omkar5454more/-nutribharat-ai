@@ -9,6 +9,7 @@ import { useHealthContext } from '@/lib/healthCtx';
 import { colors, radius } from '@/lib/theme';
 import { Badge, Button, Card, Chips, H2, Muted, Notice } from './ui';
 import { CheckPop } from './motion';
+import { celebrate } from './Celebrate';
 
 export function useExName() {
   const lang = useLang((s) => s.lang);
@@ -115,6 +116,7 @@ export function GymPlanView() {
 
   async function toggle(s: Session, date: string, done: boolean) {
     await setWorkoutStatus(ctx.uid!, ctx.memberId, date, s.key, done ? null : 'done');
+    if (!done) celebrate(t('h4.cel.workout'));
     await qc.invalidateQueries({ queryKey: ['workouts'] });
   }
 

@@ -8,6 +8,7 @@ import { colors } from '@/lib/theme';
 import { LanguagePicker } from './common';
 import { Icon } from './icons';
 import { FadeIn, useReducedMotion } from './motion';
+import { Mascot } from './Mascot';
 import { Field } from './ui';
 
 /** A heart badge that gently floats. Stays still when the person prefers reduced motion. */
@@ -54,7 +55,7 @@ export function AuthShell({ title, subtitle, children }: { title: string; subtit
         <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
           <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40, gap: 18 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={{ alignItems: 'center', gap: 10, marginTop: 8 }}>
-              <FloatingHeart />
+              <Mascot mood="happy" size={104} />
               <Text style={{ fontSize: 30, fontWeight: '800', color: '#1F1B3A', letterSpacing: -0.5 }} accessibilityRole="header">{t('app.name')}</Text>
               <Text style={{ fontSize: 16, color: '#4A4568', fontWeight: '600', textAlign: 'center' }}>{t('h4.auth.hero')}</Text>
             </View>

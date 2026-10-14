@@ -5,6 +5,9 @@ import { Linking, View } from 'react-native';
 import { FOLLOW_UP_DELAYS_MIN, SYMPTOM_TYPES, screenGeneral, screenHeadache, type HeadacheAnswers, type Screening, type SymptomType } from '@/core/health/symptoms';
 import { fmtMinute } from '@/core/routine';
 import { Button, Card, Chips, Field, H1, H2, MultiChips, Muted, Notice, Screen } from '@/components/ui';
+import { ContactAlert } from '@/components/ContactAlert';
+import { Mascot } from '@/components/Mascot';
+import { cancelScheduled, scheduleOnce } from '@/lib/notify';
 import { useT, type Key } from '@/i18n';
 import { createCheckIn, logSafetyEvent, useNotifPrefs } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
@@ -50,10 +53,11 @@ export default function CheckIn() {
     try {
       const delay = follow === 'no' ? null : (follow as (typeof FOLLOW_UP_DELAYS_MIN)[number]);
       const quiet = prefs.data?.quiet ?? null;
-      await createCheckIn(ctx.uid!, ctx.memberId, { type, severity, screening: result!, followDelayMin: delay, quiet, customLabel: label.trim() || undefined });
+      const logId = await createCheckIn(ctx.uid!, ctx.memberId, { type, severity, screening: result!, followDelayMin: delay, quiet, customLabel: label.trim() || undefined });
       await qc.invalidateQueries({ queryKey: ['symptoms'] });
       await qc.invalidateQueries({ queryKey: ['followups'] });
       const due = delay && result === 'usual' ? Date.now() + delay * 60000 : 0;
+      if (due) scheduleOnce(`fu-${logId}`, t('h4.nt.followup'), due);   // a real phone notification on Android / iOS (generic text)
       setSaved(due ? t('h4.ci.savedFollow', { time: fmtMinute(new Date(due).getHours() * 60 + new Date(due).getMinutes()) }) : t('h4.ci.saved'));
     } catch {
       setError(t('h4.ci.consentNeeded'));
@@ -62,6 +66,7 @@ export default function CheckIn() {
 
   return (
     <Screen>
+      <View style={{ alignItems: 'center' }}><Mascot mood="care" size={96} /></View>
       <H1>{t('h4.ci.sorry')}</H1>
       {result === null ? (
         <>
@@ -85,6 +90,7 @@ export default function CheckIn() {
             <>
               <Notice tone="urgent">{t('h4.ci.emergency')}</Notice>
               <Button title={t('h4.emergency.call')} variant="danger" onPress={() => { Linking.openURL('tel:112').catch(() => {}); }} />
+              <ContactAlert kind="emergency" />
             </>
           ) : result === 'see_doctor' ? (
             <Notice tone="warn">{t('h4.ci.seeDoctor')}</Notice>

@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Pressable, Text, View } from 'react-native';
 import { CountUp, Ring } from '@/components/motion';
+import { celebrate } from '@/components/Celebrate';
 import { Notes } from '@/components/common';
 import { MemberSwitcher } from '@/components/MemberSwitcher';
 import { RoutineView } from '@/components/RoutineView';
@@ -35,7 +36,7 @@ export default function Today() {
   async function changeWater(action: 'add' | 'undo') {
     setWaterError('');
     try {
-      if (action === 'add') await addWater(uid!, memberId, GLASS_ML);
+      if (action === 'add') { await addWater(uid!, memberId, GLASS_ML); if (drunk + GLASS_ML >= targets.water_ml && drunk < targets.water_ml) celebrate(t('h4.cel.water')); }
       else if (water.data?.[0]) await deleteWater(water.data[0].id);
       await qc.invalidateQueries({ queryKey: ['water'] });
     } catch {
