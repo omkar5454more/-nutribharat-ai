@@ -24,7 +24,7 @@ Any email and password work. Everything runs in the browser against a built-in f
 
 ## Put it on the internet (about 30 minutes, all free tiers)
 ### 1. Database (Supabase)
-1. Create a free project at supabase.com (done: project `cqjfvcvweyazqlzqdcka`, tables created; `.env` / `.env.production` hold its URL and *publishable* key, which are safe to ship).
+1. Create a free project at supabase.com (done: project `cqjfvcvweyazqlzqdcka`, tables created incl. the Release-4 health tables (migration 0004); `.env` / `.env.production` hold its URL and *publishable* key, which are safe to ship).
 2. **SQL editor → New query**, paste the whole of `supabase/all-in-one.sql`, press **Run**. (It is generated from `supabase/migrations/` by `npm run sql`.)
 3. **Authentication → URL Configuration**: set *Site URL* to your web address (e.g. `https://nutribharat-ai.vercel.app`) and add it under *Redirect URLs*. Email links (confirm account, reset password) return there.
 4. *Authentication → Providers → Email*: keep "Confirm email" on for a real launch (the app handles both).
