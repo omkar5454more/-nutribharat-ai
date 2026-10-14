@@ -618,6 +618,8 @@ export const en = {
   'h4.chat.sharing': 'The assistant sees a short summary of your health rules, because you allowed it. You can turn this off in Health & privacy.',
   'h4.today.setup': 'Set up your daily routine',
   'h4.today.setupBody': 'A gentle schedule for meals, water, movement and rest, with optional health settings.',
+
+  'h4.plan.relaxed': 'For {meal}, no option matched every health rule, so the closest one is shown. Please check it with your doctor or dietitian.',
 } as const;
 
 export type Key = keyof typeof en;

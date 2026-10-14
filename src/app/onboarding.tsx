@@ -4,6 +4,7 @@ import { ProfileForm } from '@/components/ProfileForm';
 import { H1, Muted, Screen } from '@/components/ui';
 import { useT } from '@/i18n';
 import { useSession } from '@/state/session';
+import { useSetupPending } from '@/state/setup';
 
 export default function Onboarding() {
   const t = useT();
@@ -14,7 +15,7 @@ export default function Onboarding() {
       <H1>{t('onb.title')}</H1>
       <LanguagePicker />
       <Muted>{t('onb.body')}</Muted>
-      <ProfileForm userId={session!.user.id} submitLabel={t('onb.continue')} onSaved={() => qc.invalidateQueries({ queryKey: ['profile'] })} />
+      <ProfileForm userId={session!.user.id} submitLabel={t('onb.continue')} onSaved={() => { useSetupPending.getState().set(true); qc.invalidateQueries({ queryKey: ['profile'] }); }} />
     </Screen>
   );
 }

@@ -276,6 +276,16 @@ export async function setActivityStatus(uid: string, activityId: string, status:
   }
 }
 
+/** Change one entry (time, or a swapped lighter workout). */
+export async function updateActivity(id: string, a: { start?: number; duration?: number; intensity?: string }) {
+  const fields: Record<string, unknown> = {};
+  if (a.start !== undefined) fields.start_minute = a.start;
+  if (a.duration !== undefined) fields.duration_min = a.duration;
+  if (a.intensity !== undefined) { fields.payload = { intensity: a.intensity, slot: null }; fields.detail = `routine.exercise_${a.intensity}`; }
+  const { error } = await supabase.from('routine_activities').update(fields).eq('id', id);
+  must(error);
+}
+
 /** Convenience: the generated routine for a day (not saved). */
 export const draftRoutine = generateRoutine;
 

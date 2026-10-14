@@ -10,6 +10,8 @@ import { useFoodLabel, useT, type Key } from '@/i18n';
 import { useActive } from '@/lib/active';
 import { targetsFor } from '@/lib/data';
 import { useDraft } from '@/state/draft';
+import { HealthNotes } from '@/components/HealthNotes';
+import { useHealthContext } from '@/lib/healthCtx';
 
 const REGIONS: Region[] = ['any', 'maharashtrian', 'north', 'south', 'gujarati'];
 
@@ -18,6 +20,7 @@ export default function Plan() {
   const label = useFoodLabel();
   const router = useRouter();
   const { profile } = useActive();
+  const health = useHealthContext();
   const targets = targetsFor(profile);
   const [region, setRegion] = useState<Region>('any');
   const [seed, setSeed] = useState(1);
@@ -28,8 +31,8 @@ export default function Plan() {
   const g = t('common.g');
 
   const plan = useMemo(
-    () => planDay({ targets, diet: profile.diet as DietPref, region, allergies: profile.allergies, seed, budget }),
-    [targets.kcal, targets.protein_g, profile.diet, profile.allergies.join(','), region, seed, budget]
+    () => planDay({ targets, diet: profile.diet as DietPref, region, allergies: profile.allergies, seed, budget, constraints: health.constraints, cooking: health.prefs?.cooking }),
+    [targets.kcal, targets.protein_g, profile.diet, profile.allergies.join(','), region, seed, budget, health.constraints, health.prefs?.cooking]
   );
 
   function logSlot(i: number) {
@@ -55,6 +58,8 @@ export default function Plan() {
       <Button title={t('plan.another')} variant="secondary" onPress={() => setSeed((s) => s + 1)} />
 
       <Notes notes={targets.notes} />
+      <HealthNotes constraints={health.constraints} />
+      {plan.relaxedSlots.map((s) => <Notice key={s}>{t('h4.plan.relaxed', { meal: t(`meal.${s}` as Key) })}</Notice>)}
       {plan.overBudget ? <Notice>{t('plan.over', { n: plan.totalCost })}</Notice> : null}
       {profile.diet === 'jain' ? <Notice>{t('plan.jain')}</Notice> : null}
       {plan.uncheckedAllergies.length ? <Notice>{t('plan.unchecked', { list: plan.uncheckedAllergies.join(', ') })}</Notice> : null}

@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Notes } from '@/components/common';
 import { MemberSwitcher } from '@/components/MemberSwitcher';
+import { RoutineView } from '@/components/RoutineView';
 import { Button, Card, H1, H2, Muted, Notice, ProgressBar, Screen } from '@/components/ui';
 import { useFoodLabel, useT, type Key } from '@/i18n';
 import { useActive } from '@/lib/active';
@@ -43,6 +44,8 @@ export default function Today() {
     <Screen>
       <H1>{profile.display_name ? t('today.hello', { name: profile.display_name }) : t('today.title')}</H1>
       <MemberSwitcher />
+
+      <RoutineView />
 
       <Card>
         <Muted>{t('today.calories')}</Muted>

@@ -1,8 +1,15 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
+import { useSetupPending } from '@/state/setup';
 import { useT } from '@/i18n';
 
 export default function AppLayout() {
   const t = useT();
+  const router = useRouter();
+  const pending = useSetupPending((s) => s.pending);
+  useEffect(() => {
+    if (pending) { useSetupPending.getState().set(false); router.push('/setup'); }
+  }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <Stack screenOptions={{ headerTintColor: '#16693A', headerStyle: { backgroundColor: '#FAF8F3' } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -13,6 +20,11 @@ export default function AppLayout() {
       <Stack.Screen name="family" options={{ title: t('fam.title') }} />
       <Stack.Screen name="barcode" options={{ title: t('bc.title') }} />
       <Stack.Screen name="history" options={{ title: t('prog.seeMeals') }} />
+      <Stack.Screen name="health" options={{ title: t('h4.prof.health') }} />
+      <Stack.Screen name="flex" options={{ title: t('h4.flex.title') }} />
+      <Stack.Screen name="routine-settings" options={{ title: t('h4.rt.settings') }} />
+      <Stack.Screen name="routine-edit" options={{ title: t('h4.rt.edit') }} />
+      <Stack.Screen name="setup" options={{ title: t('h4.setup.routine'), headerBackVisible: false, gestureEnabled: false }} />
     </Stack>
   );
 }
