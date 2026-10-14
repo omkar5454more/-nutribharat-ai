@@ -33,6 +33,13 @@
           "photosPermission": "NutriBharat AI uses your photos so you can scan meals.",
           "cameraPermission": "NutriBharat AI uses the camera so you can scan meals."
         }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "NutriBharat AI uses the camera to scan food barcodes.",
+          "barcodeScannerEnabled": true
+        }
       ]
     ],
     "scheme": "nutribharat",

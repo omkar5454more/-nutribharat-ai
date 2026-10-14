@@ -2,20 +2,20 @@ import { useState } from 'react';
 import { Alert, Platform, Text, View } from 'react-native';
 import { Button, Card, H1, Muted, Notice, Screen } from '@/components/ui';
 import { useFoodLabel, useT, type Key } from '@/i18n';
+import { useActive } from '@/lib/active';
 import { deleteMeal, startOfDay, totalsOf, useInvalidateMeals, useMeals, type MealRow } from '@/lib/data';
-import { useSession } from '@/state/session';
 
 const DAYS = 7;
 
 export default function History() {
   const t = useT();
   const label = useFoodLabel();
-  const { session } = useSession();
+  const { uid, memberId } = useActive();
   const [error, setError] = useState('');
   const invalidate = useInvalidateMeals();
   const to = new Date(startOfDay().getTime() + 24 * 3600 * 1000);
   const from = new Date(to.getTime() - DAYS * 24 * 3600 * 1000);
-  const meals = useMeals(session?.user.id, from, to);
+  const meals = useMeals(uid, memberId, from, to);
 
   const byDay = new Map<string, MealRow[]>();
   (meals.data ?? []).forEach((m) => {

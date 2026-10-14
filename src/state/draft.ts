@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { makeItem } from '@/core/nutrition';
+import { makeItem, withGrams } from '@/core/nutrition';
 import { FOOD_BY_ID } from '@/core/foods';
 import type { Food, MealItem } from '@/core/types';
 import { mealTypeNow, type MealType } from '@/lib/data';
@@ -14,6 +14,7 @@ type Draft = {
   start: (items: MealItem[], unmatched?: { name: string; grams: number }[]) => void;
   setMealType: (t: MealType) => void;
   add: (food: Food, grams: number) => void;
+  addItem: (item: MealItem) => void;
   setGrams: (index: number, grams: number) => void;
   replaceFood: (index: number, foodId: string) => void;
   remove: (index: number) => void;
@@ -30,10 +31,8 @@ export const useDraft = create<Draft>((set) => ({
   start: (items, unmatched = []) => set({ items, unmatched, mealType: mealTypeNow(), note: '' }),
   setMealType: (mealType) => set({ mealType }),
   add: (food, grams) => set((s) => ({ items: [...s.items, makeItem(food, grams, 'manual')] })),
-  setGrams: (i, grams) =>
-    set((s) => ({
-      items: s.items.map((it, k) => (k === i ? { ...makeItem(FOOD_BY_ID[it.foodId], Math.max(1, grams), it.source, it.confidence) } : it)),
-    })),
+  addItem: (item) => set((s) => ({ items: [...s.items, item] })),
+  setGrams: (i, grams) => set((s) => ({ items: s.items.map((it, k) => (k === i ? withGrams(it, Math.max(1, grams)) : it)) })),
   replaceFood: (i, foodId) =>
     set((s) => ({ items: s.items.map((it, k) => (k === i ? makeItem(FOOD_BY_ID[foodId], it.grams, it.source, it.confidence) : it)) })),
   remove: (i) => set((s) => ({ items: s.items.filter((_, k) => k !== i) })),

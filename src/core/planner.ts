@@ -1,5 +1,6 @@
 import { FOOD_BY_ID } from './foods';
 import { makeItem, mealTotals, sumNutrients } from './nutrition';
+import { costOf } from './prices';
 import type { Food, MealItem, Nutrients, Targets } from './types';
 
 export type Region = 'any' | 'maharashtrian' | 'north' | 'south' | 'gujarati';
@@ -105,7 +106,7 @@ const dietAllows = (diet: DietPref, food: Food): boolean => {
 };
 
 // ---------------------------------------------------------------- generator
-export type PlannedSlot = { slot: Slot; items: MealItem[]; totals: Nutrients; target_kcal: number };
+export type PlannedSlot = { slot: Slot; items: MealItem[]; totals: Nutrients; target_kcal: number; cost: number };
 export type DayPlan = {
   slots: PlannedSlot[];
   totals: Nutrients;
@@ -113,6 +114,10 @@ export type DayPlan = {
   uncheckedAllergies: string[];
   /** slots for which no suitable combination exists under the chosen filters */
   emptySlots: Slot[];
+  /** estimated cost of the day in rupees (rough prices) */
+  totalCost: number;
+  /** true when a daily budget was given but the cheapest suitable plan still costs more than it */
+  overBudget: boolean;
 };
 
 function mulberry32(seed: number) {
@@ -141,8 +146,12 @@ export function planDay(opts: {
   region: Region;
   allergies?: string[];
   seed?: number;
+  /** daily food budget in rupees; when set the planner prefers combinations that fit it */
+  budget?: number;
 }): DayPlan {
-  const { targets, diet, region, allergies = [], seed = 1 } = opts;
+  const { targets, diet, region, allergies = [], seed = 1, budget } = opts;
+  let carry = 0; // unspent budget from earlier meals can be used by later ones
+  let anyOver = false;
   const rnd = mulberry32(seed);
   const { foods: banned, unchecked } = excludedByAllergies(allergies);
 
@@ -173,12 +182,25 @@ export function planDay(opts: {
         const items = scale(c, target_kcal);
         const t = mealTotals(items);
         const err = Math.abs(t.kcal - target_kcal) / Math.max(target_kcal, 1) + Math.max(0, targetProtein - t.protein_g) / Math.max(targetProtein, 1) * 0.5;
-        return { c, items, t, score: err - (region !== 'any' && c.region === region ? 0.15 : 0) };
+        const cost = items.reduce((a, i) => a + costOf(i.foodId, i.grams), 0);
+        return { c, items, t, cost, score: err - (region !== 'any' && c.region === region ? 0.15 : 0) };
       })
       .sort((a, b) => a.score - b.score);
-    const pick = scored[Math.floor(rnd() * Math.min(3, scored.length))];
+    let choices = scored;
+    if (budget !== undefined) {
+      const allowance = budget * SLOT_SHARE[slot] + carry;
+      const affordable = scored.filter((s) => s.cost <= allowance);
+      if (affordable.length) choices = affordable;
+      else {
+        choices = [...scored].sort((a, b) => a.cost - b.cost); // nothing fits: take the cheapest and say so
+        anyOver = true;
+      }
+    }
+    const pick = choices[Math.floor(rnd() * Math.min(3, choices.length))];
+    if (budget !== undefined) carry = Math.max(0, budget * SLOT_SHARE[slot] + carry - pick.cost);
     used.add(pick.c);
-    slots.push({ slot, items: pick.items, totals: pick.t, target_kcal });
+    slots.push({ slot, items: pick.items, totals: pick.t, target_kcal, cost: Math.round(pick.cost) });
   }
-  return { slots, totals: sumNutrients(slots.map((s) => s.totals)), uncheckedAllergies: unchecked, emptySlots };
+  const totalCost = Math.round(slots.reduce((a, s) => a + s.cost, 0));
+  return { slots, totals: sumNutrients(slots.map((s) => s.totals)), uncheckedAllergies: unchecked, emptySlots, totalCost, overBudget: budget !== undefined && (anyOver || totalCost > budget) };
 }

@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Button, Field, H1, Muted, Notice, Screen } from '@/components/ui';
 import { useT } from '@/i18n';
+import { appUrl } from '@/lib/pwa';
 import { supabase } from '@/lib/supabase';
 
 export default function ForgotPassword() {
@@ -13,7 +14,7 @@ export default function ForgotPassword() {
   async function submit() {
     if (!email.trim()) return;
     setBusy(true);
-    await supabase.auth.resetPasswordForEmail(email.trim());
+    await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: appUrl() });
     setBusy(false);
     // same message whether or not the email exists, so accounts cannot be probed
     setMessage(t('auth.resetSent'));

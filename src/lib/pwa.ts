@@ -36,3 +36,8 @@ export function useInstall() {
     install: async () => { if (!event) return; await event.prompt(); await event.userChoice; setEvent(null); },
   };
 }
+
+/** Where email links (confirm account, reset password) should send people back to. Only known on the web; the Android app needs a deep link. */
+export function appUrl(): string | undefined {
+  return Platform.OS === 'web' && typeof window !== 'undefined' ? window.location.origin : undefined;
+}

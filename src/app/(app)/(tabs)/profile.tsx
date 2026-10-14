@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Platform, Text } from 'react-native';
 import { LanguagePicker, Notes } from '@/components/common';
+import { FamilyLink } from '@/components/MemberSwitcher';
 import { Button, Card, H1, H2, Muted, Notice, Screen } from '@/components/ui';
 import { useT, type Key } from '@/i18n';
 import { useInstall } from '@/lib/pwa';
@@ -73,6 +74,7 @@ export default function Profile() {
       ) : null}
       <H2>{t('common.language')}</H2>
       <LanguagePicker />
+      <FamilyLink />
       <Button title={t('prof.edit')} variant="secondary" onPress={() => router.push('/edit-profile')} />
       <Button title={t('prof.signOut')} variant="secondary" onPress={signOut} />
       <H2>{t('prof.data')}</H2>

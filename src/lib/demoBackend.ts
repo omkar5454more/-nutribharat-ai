@@ -7,11 +7,12 @@ import { FOOD_BY_ID } from '@/core/foods';
 import { nutrientsFor } from '@/core/nutrition';
 
 type Row = Record<string, any>;
-type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; seq: number };
+type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; members: Row[]; sleep_logs: Row[]; activity_logs: Row[]; seq: number };
+const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs'] as const;
 export type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
 
 const KEY = 'nutribharat.demo.db';
-const empty = (): Db => ({ users: [], profiles: [], meals: [], meal_items: [], water_logs: [], weight_logs: [], seq: 1 });
+const empty = (): Db => ({ users: [], profiles: [], meals: [], meal_items: [], water_logs: [], weight_logs: [], members: [], sleep_logs: [], activity_logs: [], seq: 1 });
 
 const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 const fakeJwt = (sub: string) => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub, role: 'authenticated', exp: Math.floor(Date.now() / 1000) + 30 * 86400 })}.demo`;
@@ -92,6 +93,13 @@ function seedHistory(db: Db, userId: string, weightKg: number, now = new Date())
       items.forEach((i) => db.meal_items.push({ id: `demo-i${db.seq++}`, meal_id: mealId, user_id: userId, food_id: i.id, name: FOOD_BY_ID[i.id].name, grams: i.grams, source: 'manual', ai_confidence: null, ...i.n }));
     }
   });
+  // a week of sleep and steps
+  for (let d = 1; d <= 6; d++) {
+    const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d);
+    const day = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    db.sleep_logs.push({ id: `demo-s${db.seq++}`, user_id: userId, member_id: null, logged_on: day, hours: [6.5, 7, 7.5, 6, 8, 7][d - 1] });
+    db.activity_logs.push({ id: `demo-a${db.seq++}`, user_id: userId, member_id: null, logged_on: day, steps: [6200, 8400, 9100, 4300, 10200, 7600][d - 1], exercise_min: [0, 30, 20, 0, 40, 15][d - 1] });
+  }
   // three weeks of gentle weight loss with day-to-day noise
   for (let d = 20; d >= 1; d -= 3) {
     const date = new Date(now.getFullYear(), now.getMonth(), now.getDate() - d);
@@ -105,10 +113,11 @@ function applyFilters(rows: Row[], params: URLSearchParams): Row[] {
   let out = rows;
   for (const [key, value] of params.entries()) {
     if (['select', 'order', 'limit', 'columns', 'on_conflict'].includes(key)) continue;
-    const m = /^(eq|gte|lt|lte|gt)\.(.*)$/.exec(value);
+    const m = /^(eq|gte|lt|lte|gt|is)\.(.*)$/.exec(value);
     if (!m) continue;
     const [, op, v] = m;
     out = out.filter((r) => {
+      if (op === 'is') return v === 'null' ? r[key] === null || r[key] === undefined : String(r[key]) === v;
       const a = String(r[key] ?? '');
       switch (op) {
         case 'eq': return a === v;
@@ -165,10 +174,11 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
       const user = db.users[0];
       return user ? json(sessionFor(user)) : json({ error: 'invalid_grant' }, 400);
     }
+    if (path.endsWith('/auth/v1/recover')) return json({});
     if (path.endsWith('/auth/v1/logout')) return empty204();
     if (path.endsWith('/auth/v1/user')) {
       const user = currentUser(req, db);
-      return user ? json(sessionFor(user).user) : json({ message: 'not signed in' }, 401);
+      return user ? json(sessionFor(user).user) : json({ message: 'not signed in' }, 401);   // GET, and PUT (change password: a no-op in the demo)
     }
 
     // ---- AI functions (pre-written)
@@ -184,7 +194,8 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
 
     if (path.endsWith('/rest/v1/rpc/delete_my_account')) {
       const id = user.id;
-      for (const t of ['profiles', 'meals', 'meal_items', 'water_logs', 'weight_logs'] as const) db[t] = db[t].filter((r) => (r.user_id ?? r.id) !== id);
+      for (const t of ['profiles', 'meals', 'meal_items', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs'] as const) db[t] = db[t].filter((r) => (r.user_id ?? r.id) !== id);
+      db.members = db.members.filter((m) => m.owner_id !== id);
       db.users = db.users.filter((u) => u.id !== id);
       save(db);
       return empty204();
@@ -192,7 +203,7 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
 
     const table = /\/rest\/v1\/(\w+)$/.exec(path)?.[1] as keyof Omit<Db, 'seq' | 'users'> | undefined;
     if (!table || !(table in db)) return json({ message: `demo backend: unknown route ${path}` }, 404);
-    const mine = (r: Row) => (table === 'profiles' ? r.id === user.id : r.user_id === user.id);
+    const mine = (r: Row) => (table === 'profiles' ? r.id === user.id : table === 'members' ? r.owner_id === user.id : r.user_id === user.id);
 
     if (method === 'GET') {
       let rows = applyFilters(db[table].filter(mine), url.searchParams);
@@ -206,7 +217,8 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
       const list: Row[] = Array.isArray(b) ? b : [b];
       const inserted: Row[] = [];
       for (const row of list) {
-        const r: Row = { ...row, user_id: table === 'profiles' ? undefined : user.id };
+        const r: Row = { ...row, user_id: table === 'profiles' || table === 'members' ? undefined : user.id };
+        if (table === 'members') { r.created_at = now().toISOString(); r.owner_id = user.id; }
         if (table === 'profiles') {
           const existing = db.profiles.find((p) => p.id === user.id);
           if (existing) Object.assign(existing, row, { id: user.id });
@@ -230,10 +242,23 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
       return new Response(null, { status: 201 });
     }
 
+    if (method === 'PATCH') {
+      const b = await body();
+      const hit = applyFilters(db[table].filter(mine), url.searchParams);
+      hit.forEach((r) => Object.assign(r, b));
+      save(db);
+      return req.headers.get('Prefer')?.includes('return=representation') ? json(hit.map((r) => ({ id: r.id }))) : empty204();
+    }
+
     if (method === 'DELETE') {
       const doomed = new Set(applyFilters(db[table].filter(mine), url.searchParams).map((r) => r.id));
       db[table] = db[table].filter((r) => !doomed.has(r.id)) as any;
       if (table === 'meals') db.meal_items = db.meal_items.filter((i) => !doomed.has(i.meal_id));
+      if (table === 'members') {
+        // a removed family member takes all of their logs with them
+        for (const t of LOG_TABLES) db[t] = db[t].filter((r) => !doomed.has(r.member_id)) as any;
+        db.meal_items = db.meal_items.filter((i) => db.meals.some((m) => m.id === i.meal_id));
+      }
       save(db);
       return empty204();
     }

@@ -42,18 +42,21 @@ function DemoBanner() {
 }
 
 function Navigator() {
-  const { session, isLoading } = useSession();
+  const { session, isLoading, recovery } = useSession();
   const profile = useProfile(session?.user.id);
   const ready = !isLoading && (!session || !profile.isLoading);
   if (ready) SplashScreen.hide();
   if (!ready) return null;
 
-  const signedIn = !!session;
+  const signedIn = !!session && !recovery;
   const hasProfile = !!profile.data;
 
   return (
     <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Protected guard={!signedIn}>
+      <Stack.Protected guard={recovery}>
+        <Stack.Screen name="reset-password" />
+      </Stack.Protected>
+      <Stack.Protected guard={!signedIn && !recovery}>
         <Stack.Screen name="sign-in" />
         <Stack.Screen name="sign-up" />
         <Stack.Screen name="forgot-password" />

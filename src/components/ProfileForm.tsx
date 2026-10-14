@@ -1,23 +1,39 @@
 import { useState } from 'react';
-import { Text } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
 import { computeTargets } from '@/core/goals';
 import type { ActivityLevel, GoalType, ReproductiveStatus, Sex } from '@/core/types';
 import { useT, type Key } from '@/i18n';
-import { ageFrom, saveProfile, type ProfileRow } from '@/lib/data';
+import { ageFrom, saveProfile, type MemberInput, type ProfileRow } from '@/lib/data';
+import { colors } from '@/lib/theme';
 import { Notes } from './common';
 import { Button, Card, Chips, Field, H2, Muted, Notice } from './ui';
 
-// India's DPDP Act requires verifiable parental consent for under-18s; the MVP simply requires adults.
+// India's DPDP Act requires verifiable parental consent for under-18s; the app simply requires adults.
 const MIN_AGE = 18;
 const ACTIVITIES: ActivityLevel[] = ['sedentary', 'light', 'moderate', 'active', 'very_active'];
 const DIETS = ['any', 'veg', 'egg', 'non-veg', 'vegan', 'jain'] as const;
+const RELATIONS = ['spouse', 'parent', 'sibling', 'adultChild', 'other'] as const;
 
 const validBirth = (s: string) => /^\d{4}-\d{2}-\d{2}$/.test(s) && !Number.isNaN(Date.parse(s));
 const num = (s: string) => Number(s.replace(',', '.'));
 
-export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId: string; initial?: ProfileRow | null; onSaved: () => void; submitLabel: string }) {
+type Props = {
+  userId: string;
+  initial?: ProfileRow | null;
+  submitLabel: string;
+  onSaved: () => void;
+  /** 'member' = adding a family member: a name and the person's consent are required */
+  mode?: 'self' | 'member';
+  /** used in member mode instead of saving the user's own profile */
+  onSubmitMember?: (m: MemberInput) => Promise<void>;
+};
+
+export function ProfileForm({ userId, initial, onSaved, submitLabel, mode = 'self', onSubmitMember }: Props) {
   const t = useT();
+  const isMember = mode === 'member';
   const [name, setName] = useState(initial?.display_name ?? '');
+  const [relation, setRelation] = useState<(typeof RELATIONS)[number]>('spouse');
+  const [consent, setConsent] = useState(false);
   const [birth, setBirth] = useState(initial?.birth_date ?? '');
   const [height, setHeight] = useState(initial ? String(initial.height_cm) : '');
   const [weight, setWeight] = useState(initial ? String(initial.weight_kg) : '');
@@ -32,22 +48,26 @@ export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId:
 
   async function submit() {
     const errs: Record<string, string> = {};
+    if (isMember && !name.trim()) errs.name = t('fam.nameNeeded');
     if (!validBirth(birth)) errs.birth_date = t('form.dobFormat');
     else if (ageFrom(birth) < MIN_AGE) errs.birth_date = t('form.dobAdult', { n: MIN_AGE });
     else if (ageFrom(birth) > 100) errs.birth_date = t('form.dobInvalid');
     if (!(num(height) >= 100 && num(height) <= 230)) errs.height_cm = t('form.heightRange');
     if (!(num(weight) >= 30 && num(weight) <= 250)) errs.weight_kg = t('form.weightRange');
+    if (isMember && !consent) errs.consent = t('fam.consentNeeded');
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setBusy(true);
+    const row = {
+      display_name: name.trim().slice(0, 40), birth_date: birth, height_cm: num(height), weight_kg: num(weight),
+      sex, activity, goal, reproductive: sex === 'male' ? ('none' as const) : repro, diet,
+      allergies: allergies.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean).slice(0, 20),
+    };
     try {
-      await saveProfile(userId, {
-        display_name: name.trim().slice(0, 40), birth_date: birth, height_cm: num(height), weight_kg: num(weight),
-        sex, activity, goal, reproductive: sex === 'male' ? 'none' : repro, diet,
-        allergies: allergies.split(',').map((a) => a.trim().toLowerCase()).filter(Boolean).slice(0, 20),
-      });
+      if (isMember) await onSubmitMember!({ ...row, relation });
+      else await saveProfile(userId, row);
       onSaved();
-    } catch (e) {
+    } catch {
       setErrors({ form: t('form.saveFail') });
     } finally {
       setBusy(false);
@@ -59,7 +79,13 @@ export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId:
 
   return (
     <>
-      <Field label={t('form.name')} value={name} onChangeText={setName} maxLength={40} />
+      <Field label={isMember ? t('fam.name') : t('form.name')} value={name} onChangeText={setName} maxLength={40} error={errors.name} />
+      {isMember ? (
+        <>
+          <H2>{t('fam.relation')}</H2>
+          <Chips value={relation} onChange={setRelation} options={RELATIONS.map((v) => ({ value: v, label: t(`fam.rel.${v}` as Key) }))} />
+        </>
+      ) : null}
       <Field label={t('form.dob')} value={birth} onChangeText={setBirth} placeholder="YYYY-MM-DD" keyboardType="numbers-and-punctuation" error={errors.birth_date} />
       <Field label={t('form.height')} value={height} onChangeText={setHeight} keyboardType="decimal-pad" error={errors.height_cm} />
       <Field label={t('form.weight')} value={weight} onChangeText={setWeight} keyboardType="decimal-pad" error={errors.weight_kg} />
@@ -96,6 +122,21 @@ export function ProfileForm({ userId, initial, onSaved, submitLabel }: { userId:
           <Notes notes={preview.notes} />
         </Card>
       ) : null}
+
+      {isMember ? (
+        <Pressable
+          onPress={() => setConsent(!consent)}
+          accessibilityRole="checkbox"
+          accessibilityState={{ checked: consent }}
+          style={{ flexDirection: 'row', gap: 12, alignItems: 'flex-start', padding: 12, borderRadius: 12, borderWidth: 1, borderColor: errors.consent ? colors.danger : colors.border, backgroundColor: '#fff' }}
+        >
+          <View style={{ width: 24, height: 24, borderRadius: 6, borderWidth: 2, borderColor: colors.primary, backgroundColor: consent ? colors.primary : '#fff', alignItems: 'center', justifyContent: 'center' }}>
+            {consent ? <Text style={{ color: '#fff', fontWeight: '800' }}>✓</Text> : null}
+          </View>
+          <Text style={{ flex: 1, color: colors.text, lineHeight: 20 }}>{t('fam.consent')}</Text>
+        </Pressable>
+      ) : null}
+      {errors.consent ? <Notice>{errors.consent}</Notice> : null}
 
       {errors.form ? <Notice>{errors.form}</Notice> : null}
       <Button title={submitLabel} onPress={submit} loading={busy} />

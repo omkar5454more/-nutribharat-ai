@@ -31,8 +31,29 @@ export function sumNutrients(list: Nutrients[]): Nutrients {
   return { kcal: Math.round(t.kcal), protein_g: r1(t.protein_g), carbs_g: r1(t.carbs_g), fat_g: r1(t.fat_g), fiber_g: r1(t.fiber_g) };
 }
 
+export function scaleNutrients(per100g: Nutrients, grams: number): Nutrients {
+  const k = Math.max(0, grams) / 100;
+  return {
+    kcal: Math.round(per100g.kcal * k),
+    protein_g: r1(per100g.protein_g * k),
+    carbs_g: r1(per100g.carbs_g * k),
+    fat_g: r1(per100g.fat_g * k),
+    fiber_g: r1(per100g.fiber_g * k),
+  };
+}
+
 export function makeItem(food: Food, grams: number, source: MealItem['source'], confidence?: number): MealItem {
-  return { foodId: food.id, name: food.name, grams, nutrients: nutrientsFor(food, grams), source, confidence };
+  return { foodId: food.id, name: food.name, grams, per100g: food.per100g, nutrients: nutrientsFor(food, grams), source, confidence };
+}
+
+/** A packaged or hand-entered food that is not in the Indian food table (values come from the label / a product database). */
+export function makeCustomItem(id: string, name: string, per100g: Nutrients, grams: number): MealItem {
+  return { foodId: id, name, grams, per100g, nutrients: scaleNutrients(per100g, grams), source: 'manual' };
+}
+
+/** Same food, new weight. */
+export function withGrams(item: MealItem, grams: number): MealItem {
+  return { ...item, grams, nutrients: scaleNutrients(item.per100g, grams) };
 }
 
 /** grams for "quantity x household unit", e.g. (roti, '1 roti', 2) -> 80 g. Falls back to the first unit. */

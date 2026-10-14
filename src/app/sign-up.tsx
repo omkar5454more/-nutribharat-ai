@@ -2,6 +2,7 @@ import { Link } from 'expo-router';
 import { useState } from 'react';
 import { Button, Field, H1, Muted, Notice, Screen } from '@/components/ui';
 import { useT } from '@/i18n';
+import { appUrl } from '@/lib/pwa';
 import { supabase } from '@/lib/supabase';
 
 export default function SignUp() {
@@ -23,7 +24,7 @@ export default function SignUp() {
     setErrors(errs);
     if (Object.keys(errs).length) return;
     setBusy(true);
-    const { data, error } = await supabase.auth.signUp({ email: mail, password });
+    const { data, error } = await supabase.auth.signUp({ email: mail, password, options: { emailRedirectTo: appUrl() } });
     setBusy(false);
     if (error) return setErrors({ form: error.message });
     // With email confirmation switched on in Supabase there is no session until the user clicks the link.

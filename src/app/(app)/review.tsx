@@ -8,7 +8,7 @@ import { useFoodLabel, useT, type Key } from '@/i18n';
 import { saveMeal, useInvalidateMeals, type MealType } from '@/lib/data';
 import { colors } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
-import { useSession } from '@/state/session';
+import { useActive } from '@/lib/active';
 
 const TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
@@ -17,7 +17,7 @@ export default function Review() {
   const t = useT();
   const label = useFoodLabel();
   const router = useRouter();
-  const { session } = useSession();
+  const { uid, memberId } = useActive();
   const invalidate = useInvalidateMeals();
   const d = useDraft();
   const [busy, setBusy] = useState(false);
@@ -31,7 +31,7 @@ export default function Review() {
     if (d.unmatched.length) return setError(t('review.unmatchedBlock'));
     setBusy(true);
     try {
-      await saveMeal(session!.user.id, d.mealType, d.items);
+      await saveMeal(uid!, memberId, d.mealType, d.items);
       invalidate();
       d.reset();
       router.dismissAll();
@@ -93,6 +93,7 @@ export default function Review() {
 
       <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
         <Button title={t('review.addFood')} variant="secondary" onPress={() => router.push({ pathname: '/add-food', params: { mode: 'add' } })} />
+        <Button title={t('review.barcode')} variant="secondary" onPress={() => router.push('/barcode')} />
         <Button title={t('review.oil')} variant="secondary" onPress={() => d.add(FOOD_BY_ID['ghee-oil'], 5)} />
       </View>
       <Muted>{t('review.oilHint')}</Muted>

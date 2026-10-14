@@ -57,9 +57,12 @@ export type Targets = {
 };
 
 export type MealItem = {
+  /** a food-table id, or `pkg:<barcode>` / `custom:<name>` for packaged / hand-entered foods */
   foodId: string;
   name: string;
   grams: number;
+  /** snapshot of the per-100 g values used, so the item can be re-scaled without looking the food up again */
+  per100g: Nutrients;
   nutrients: Nutrients;
   source: 'ai' | 'manual';
   confidence?: number;

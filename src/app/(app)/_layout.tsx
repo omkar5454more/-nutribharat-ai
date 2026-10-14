@@ -10,6 +10,8 @@ export default function AppLayout() {
       <Stack.Screen name="review" options={{ title: t('review.title') }} />
       <Stack.Screen name="add-food" options={{ title: t('add.title'), presentation: 'modal' }} />
       <Stack.Screen name="edit-profile" options={{ title: t('prof.editTitle') }} />
+      <Stack.Screen name="family" options={{ title: t('fam.title') }} />
+      <Stack.Screen name="barcode" options={{ title: t('bc.title') }} />
       <Stack.Screen name="history" options={{ title: t('prog.seeMeals') }} />
     </Stack>
   );

@@ -1,6 +1,6 @@
 import 'expo-sqlite/localStorage/install';
 import { createClient } from '@supabase/supabase-js';
-import { AppState } from 'react-native';
+import { AppState, Platform } from 'react-native';
 import { createDemoFetch, resetDemo } from './demoBackend';
 
 const url = process.env.EXPO_PUBLIC_SUPABASE_URL;
@@ -19,7 +19,7 @@ export const supabase = createClient(live ? url! : 'https://placeholder.supabase
     storage: localStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web',   // lets the web app read the password-reset / email-confirmation link
   },
   ...(isDemo ? { global: { fetch: createDemoFetch(localStorage) as typeof fetch } } : {}),
 });

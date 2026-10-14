@@ -3,25 +3,24 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { Text, View } from 'react-native';
 import { Notes } from '@/components/common';
+import { MemberSwitcher } from '@/components/MemberSwitcher';
 import { Button, Card, H1, H2, Muted, Notice, ProgressBar, Screen } from '@/components/ui';
 import { useFoodLabel, useT, type Key } from '@/i18n';
-import { GLASS_ML, addWater, deleteWater, startOfDay, targetsFor, totalsOf, useMeals, useProfile, useWater } from '@/lib/data';
+import { useActive } from '@/lib/active';
+import { GLASS_ML, addWater, deleteWater, startOfDay, targetsFor, totalsOf, useMeals, useWater } from '@/lib/data';
 import { colors } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
-import { useSession } from '@/state/session';
 
 export default function Today() {
   const t = useT();
   const label = useFoodLabel();
   const router = useRouter();
   const qc = useQueryClient();
-  const { session } = useSession();
-  const uid = session?.user.id;
-  const profile = useProfile(uid).data!;
+  const { uid, memberId, profile } = useActive();
   const from = startOfDay();
   const to = new Date(from.getTime() + 24 * 3600 * 1000);
-  const meals = useMeals(uid, from, to);
-  const water = useWater(uid, from, to);
+  const meals = useMeals(uid, memberId, from, to);
+  const water = useWater(uid, memberId, from, to);
   const [waterError, setWaterError] = useState('');
   const targets = targetsFor(profile);
   const eaten = totalsOf(meals.data ?? []);
@@ -32,7 +31,7 @@ export default function Today() {
   async function changeWater(action: 'add' | 'undo') {
     setWaterError('');
     try {
-      if (action === 'add') await addWater(uid!, GLASS_ML);
+      if (action === 'add') await addWater(uid!, memberId, GLASS_ML);
       else if (water.data?.[0]) await deleteWater(water.data[0].id);
       await qc.invalidateQueries({ queryKey: ['water'] });
     } catch {
@@ -43,6 +42,7 @@ export default function Today() {
   return (
     <Screen>
       <H1>{profile.display_name ? t('today.hello', { name: profile.display_name }) : t('today.title')}</H1>
+      <MemberSwitcher />
 
       <Card>
         <Muted>{t('today.calories')}</Muted>
@@ -75,6 +75,7 @@ export default function Today() {
       {targets.notes.length ? <Notes notes={targets.notes} /> : targets.seeProfessional ? <Notice>{t('note.generic_pro')}</Notice> : null}
 
       <Button title={t('today.scan')} onPress={() => router.push('/scan')} />
+      <Button title={t('today.barcode')} variant="secondary" onPress={() => { reset(); router.push('/barcode'); }} />
       <Button
         title={t('today.addManual')}
         variant="secondary"

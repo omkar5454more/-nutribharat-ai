@@ -1,23 +1,22 @@
 import { useRef, useState } from 'react';
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { MemberSwitcher } from '@/components/MemberSwitcher';
 import { Muted, Notice } from '@/components/ui';
 import { useLang, useT, type Key } from '@/i18n';
-import { askAssistant, startOfDay, targetsFor, totalsOf, useMeals, useProfile, type ChatMessage } from '@/lib/data';
+import { useActive } from '@/lib/active';
+import { askAssistant, startOfDay, targetsFor, totalsOf, useMeals, type ChatMessage } from '@/lib/data';
 import { colors, radius } from '@/lib/theme';
-import { useSession } from '@/state/session';
 
 const MAX_LEN = 1000;
 
 export default function Chat() {
   const t = useT();
   const lang = useLang((s) => s.lang);
-  const { session } = useSession();
-  const uid = session?.user.id;
-  const profile = useProfile(uid).data!;
+  const { uid, memberId, profile } = useActive();
   const targets = targetsFor(profile);
   const from = startOfDay();
-  const meals = useMeals(uid, from, new Date(from.getTime() + 24 * 3600 * 1000));
+  const meals = useMeals(uid, memberId, from, new Date(from.getTime() + 24 * 3600 * 1000));
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -57,6 +56,7 @@ export default function Chat() {
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView ref={scroller} contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text }} accessibilityRole="header">{t('chat.title')}</Text>
+          <MemberSwitcher />
           {messages.length === 0 ? (
             <>
               <Muted>{t('chat.empty')}</Muted>
