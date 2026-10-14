@@ -65,8 +65,6 @@ export function CountUp({ value, duration = 800, format = (n: number) => String(
   return <Text style={style}>{format(shown)}</Text>;
 }
 
-const AnimatedCircle = Animated.createAnimatedComponent(Circle);
-
 /** Circular progress ring that animates to `progress` (0..1, values above 1 simply fill the ring). */
 export function Ring({ size = 150, stroke = 14, progress, color = colors.primary, track = '#E9EFE9', children }: { size?: number; stroke?: number; progress: number; color?: string; track?: string; children?: ReactNode }) {
   const reduced = useReducedMotion();
@@ -74,17 +72,20 @@ export function Ring({ size = 150, stroke = 14, progress, color = colors.primary
   const c = 2 * Math.PI * r;
   const target = Math.max(0, Math.min(1, progress));
   const v = useRef(new Animated.Value(reduced ? target : 0)).current;
+  const [shown, setShown] = useState(reduced ? target : 0);   // plain state, not an animated SVG component: that adds attributes the web DOM rejects
   useEffect(() => {
-    if (reduced) return void v.setValue(target);
-    Animated.timing(v, { toValue: target, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    const id = v.addListener(({ value }) => setShown(value));
+    if (reduced) { v.setValue(target); setShown(target); }
+    else Animated.timing(v, { toValue: target, duration: 1000, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start();
+    return () => v.removeListener(id);
   }, [target, reduced]);
   return (
     <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }} accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: Math.round(target * 100) }}>
       <Svg width={size} height={size} style={{ position: 'absolute', transform: [{ rotate: '-90deg' }] }}>
         <Circle cx={size / 2} cy={size / 2} r={r} stroke={track} strokeWidth={stroke} fill="none" />
-        <AnimatedCircle
+        <Circle
           cx={size / 2} cy={size / 2} r={r} stroke={color} strokeWidth={stroke} fill="none" strokeLinecap="round"
-          strokeDasharray={`${c} ${c}`} strokeDashoffset={v.interpolate({ inputRange: [0, 1], outputRange: [c, 0] }) as unknown as number}
+          strokeDasharray={`${c} ${c}`} strokeDashoffset={c * (1 - shown)}
         />
       </Svg>
       {children}
