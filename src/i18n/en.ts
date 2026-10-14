@@ -776,6 +776,15 @@ export const en = {
   'h4.mood.low': 'I am sorry. Be kind to yourself today. Want to log how you feel?',
   'h4.mood.bad': 'I am sorry you feel this way. Would you like to log how you feel? If it is serious, please talk to someone you trust or a doctor.',
   'h4.water.glasses': 'Tap a glass to log water',
+
+  'h4.auth.tabIn': 'Sign in',
+  'h4.auth.tabUp': 'Create account',
+  'h4.auth.resend': 'Resend confirmation email',
+  'h4.auth.resent': 'Sent. Please check your inbox and spam folder.',
+  'h4.auth.notConfirmed': 'Your email is not confirmed yet. Open the link we emailed you, or resend it.',
+  'h4.auth.exists': 'This email already has an account. Please sign in instead.',
+  'h4.auth.rate': 'Too many emails were sent. Please wait a little and try again.',
+  'h4.auth.emailHint': 'Use an email you can open on this phone.',
 } as const;
 
 export type Key = keyof typeof en;
