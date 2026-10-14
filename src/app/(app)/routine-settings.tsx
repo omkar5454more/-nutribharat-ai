@@ -9,7 +9,7 @@ import { DEFAULT_REMINDERS } from '@/components/RoutineView';
 import { DEFAULT_PREFS, fmtMinute, generateRoutine, type ActivityKind, type RoutinePrefs } from '@/core/routine';
 import { ymd } from '@/core/flexday';
 import { useT, type Key } from '@/i18n';
-import { deleteReminder, saveReminder, saveRoutine, saveRoutinePrefs } from '@/lib/health';
+import { deleteReminder, saveNotifPrefs, saveReminder, saveRoutine, saveRoutinePrefs, useNotifPrefs, type NotifPrefs } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
 import { askNotificationPermission, notificationsAllowed, notificationsSupported } from '@/lib/notify';
 import { colors } from '@/lib/theme';
@@ -27,6 +27,9 @@ export default function RoutineSettings() {
   const [medTime, setMedTime] = useState<number | null>(8 * 60);
   const [kinds, setKinds] = useState<ActivityKind[] | null>(null);
   const [notif, setNotif] = useState(notificationsAllowed());
+  const np = useNotifPrefs(ctx.uid);
+  const [npDraft, setNpDraft] = useState<NotifPrefs | null>(null);
+  const npv = npDraft ?? np.data ?? null;
   const who = `${ctx.uid}:${ctx.memberId}`;
 
   useEffect(() => {
@@ -42,6 +45,7 @@ export default function RoutineSettings() {
     setMsg(null);
     try {
       await saveRoutinePrefs(ctx.uid!, ctx.memberId, prefs);
+      if (npDraft) await saveNotifPrefs(ctx.uid!, npDraft);
       for (const r of ctx.reminders.filter((x) => x.kind !== 'medication' && x.minute === null)) await deleteReminder(r.id);
       for (const k of KINDS) await saveReminder(ctx.uid!, ctx.memberId, { kind: k, minute: null, enabled: (kinds ?? []).includes(k) });
       // today's routine is rebuilt from the new settings
@@ -86,6 +90,20 @@ export default function RoutineSettings() {
         ) : null}
         <Muted>{t('h4.notif.note')}</Muted>
       </Card>
+
+      {npv ? (
+        <Card>
+          <H2>{t('h4.np.title')}</H2>
+          <MultiChips
+            options={[{ value: 'followups', label: t('h4.np.followups') }, { value: 'meals', label: t('h4.np.meals') }, { value: 'routine', label: t('h4.np.routine') }, { value: 'wellness', label: t('h4.np.wellness') }]}
+            values={(['followups', 'meals', 'routine', 'wellness'] as const).filter((k) => npv[k])}
+            onToggle={(k) => setNpDraft({ ...npv, [k]: !npv[k as 'followups'] })}
+          />
+          <H2>{t('h4.np.quiet')}</H2>
+          <TimeField label={t('h4.np.start')} value={npv.quiet?.startMinute ?? 22 * 60} onChange={(m) => m !== null && setNpDraft({ ...npv, quiet: { startMinute: m, endMinute: npv.quiet?.endMinute ?? 7 * 60 } })} />
+          <TimeField label={t('h4.np.end')} value={npv.quiet?.endMinute ?? 7 * 60} onChange={(m) => m !== null && setNpDraft({ ...npv, quiet: { startMinute: npv.quiet?.startMinute ?? 22 * 60, endMinute: m } })} />
+        </Card>
+      ) : null}
 
       <Card>
         <H2>{t('h4.med.title')}</H2>

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { AccessibilityInfo, Animated, Easing, Platform, Pressable, Text, View, type PressableProps, type StyleProp, type TextStyle, type ViewStyle } from 'react-native';
 import Svg, { Circle } from 'react-native-svg';
 import { colors } from '@/lib/theme';
+import { useComfort } from '@/state/comfort';
 
 /** React Native's native animation driver does not exist in the browser. */
 const native = Platform.OS !== 'web';
@@ -9,6 +10,7 @@ const native = Platform.OS !== 'web';
 /** True when the user asked the system for less motion; every animation here then jumps straight to its end state. */
 export function useReducedMotion(): boolean {
   const [reduced, setReduced] = useState(false);
+  const comfort = useComfort((s) => s.active);   // Comfort Mode switches animation off as well
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined' && window.matchMedia) {
       const q = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -21,7 +23,7 @@ export function useReducedMotion(): boolean {
     const sub = AccessibilityInfo.addEventListener('reduceMotionChanged', setReduced);
     return () => sub.remove();
   }, []);
-  return reduced;
+  return reduced || comfort;
 }
 
 /** Fades and slides its content in when it first appears. Use `delay` to stagger a list. */

@@ -13,6 +13,7 @@ import { logSafetyEvent } from '@/lib/health';
 import { useHealthContext } from '@/lib/healthCtx';
 import { Linking } from 'react-native';
 import { Button } from '@/components/ui';
+import { CheckInHistory, FeelingCard, FollowUpCard } from '@/components/CareCards';
 
 const MAX_LEN = 1000;
 /** A message handled on the device (emergency / unsafe request). It, and the reply to it, are never sent to the AI. */
@@ -83,6 +84,8 @@ export default function Chat() {
         <ScrollView ref={scroller} contentContainerStyle={{ padding: 16, gap: 10, paddingBottom: 16 }} keyboardShouldPersistTaps="handled">
           <Text style={{ fontSize: 24, fontWeight: '800', color: colors.text }} accessibilityRole="header">{t('chat.title')}</Text>
           <MemberSwitcher />
+          <FollowUpCard />
+          {messages.length === 0 ? <FeelingCard /> : null}
           {messages.length === 0 ? (
             <>
               <Muted>{t('chat.empty')}</Muted>
@@ -113,6 +116,7 @@ export default function Chat() {
           {emergency ? <Button title={t('h4.emergency.call')} variant="danger" onPress={() => { Linking.openURL('tel:112').catch(() => {}); }} /> : null}
           {health.consents.ai_processing && health.consents.condition_tracking && health.health.conditions.length ? <Muted style={{ fontSize: 12 }}>{t('h4.chat.sharing')}</Muted> : null}
           {error ? <Notice>{error}</Notice> : null}
+          {messages.length === 0 ? <CheckInHistory /> : null}
           <Muted style={{ fontSize: 12 }}>{t('chat.disclaimer')}</Muted>
         </ScrollView>
         <View style={{ flexDirection: 'row', gap: 8, padding: 12, borderTopWidth: 1, borderTopColor: colors.border, backgroundColor: '#fff' }}>

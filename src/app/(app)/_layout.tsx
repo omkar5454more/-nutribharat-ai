@@ -1,6 +1,7 @@
 import { Stack, useRouter } from 'expo-router';
 import { useEffect } from 'react';
 import { useSetupPending } from '@/state/setup';
+import { FollowUpWatcher } from '@/components/CareCards';
 import { useT } from '@/i18n';
 
 export default function AppLayout() {
@@ -11,6 +12,8 @@ export default function AppLayout() {
     if (pending) { useSetupPending.getState().set(false); router.push('/setup'); }
   }, [pending]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
+    <>
+    <FollowUpWatcher />
     <Stack screenOptions={{ headerTintColor: '#16693A', headerStyle: { backgroundColor: '#FAF8F3' } }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="scan" options={{ title: t('scan.title') }} />
@@ -24,7 +27,10 @@ export default function AppLayout() {
       <Stack.Screen name="flex" options={{ title: t('h4.flex.title') }} />
       <Stack.Screen name="routine-settings" options={{ title: t('h4.rt.settings') }} />
       <Stack.Screen name="routine-edit" options={{ title: t('h4.rt.edit') }} />
+      <Stack.Screen name="check-in" options={{ title: t('h4.ci.title') }} />
+      <Stack.Screen name="comfort" options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
       <Stack.Screen name="setup" options={{ title: t('h4.setup.routine'), headerBackVisible: false, gestureEnabled: false }} />
     </Stack>
+    </>
   );
 }

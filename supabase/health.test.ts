@@ -186,3 +186,43 @@ describe('safety log, retention and deletion', () => {
     }
   });
 });
+
+describe('symptom check-ins (migration 0005)', () => {
+  const C = '33333333-3333-3333-3333-333333333333';
+  const D = '44444444-4444-4444-4444-444444444444';
+  let log: string;
+  it('cannot be written before consent, can after', async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${C}', 'c@x.com'), ('${D}', 'd@x.com');`);
+    expect(await fails(C, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${C}', 'headache', 5, 'usual')`)).toBe(true);
+    await consent(C);
+    log = (await as<{ id: string }>(C, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${C}', 'headache', 5, 'usual') returning id`)).rows[0].id;
+  });
+  it('validates severity, type, screening and resolution', async () => {
+    expect(await fails(C, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${C}', 'headache', 11, 'usual')`)).toBe(true);
+    expect(await fails(C, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${C}', 'cough', 3, 'usual')`)).toBe(true);
+    expect(await fails(C, `insert into symptom_logs (user_id, symptom_type, severity, screening) values ('${C}', 'fatigue', 3, 'fine')`)).toBe(true);
+    expect(await fails(C, `update symptom_logs set status = 'better' where id = '${log}'`)).toBe(true);   // needs resolved_at
+    await as(C, `update symptom_logs set status = 'better', resolved_at = now() where id = '${log}'`);
+  });
+  it('follow-ups belong to the owner’s log only, and a response needs a time', async () => {
+    await as(C, `insert into symptom_followups (log_id, user_id, due_at) values ('${log}', '${C}', now() + interval '1 hour')`);
+    expect(await fails(D, `insert into symptom_followups (log_id, user_id, due_at) values ('${log}', '${D}', now())`)).toBe(true);
+    expect(await fails(C, `update symptom_followups set status = 'answered' where log_id = '${log}'`)).toBe(true);
+    expect((await as(D, `select * from symptom_logs`)).rows).toEqual([]);
+  });
+  it('notification preferences are private and quiet hours come as a pair', async () => {
+    await as(C, `insert into notification_preferences (user_id, quiet_start_minute, quiet_end_minute) values ('${C}', 1320, 420)`);
+    expect(await fails(D, `insert into notification_preferences (user_id, quiet_start_minute) values ('${D}', 1320)`)).toBe(true);
+    expect((await as(D, `select * from notification_preferences`)).rows).toEqual([]);
+  });
+  it('achievements are unique per code and private', async () => {
+    await as(C, `insert into achievements (user_id, code) values ('${C}', 'first_walk')`);
+    expect(await fails(C, `insert into achievements (user_id, code) values ('${C}', 'first_walk')`)).toBe(true);
+    expect((await as(D, `select * from achievements`)).rows).toEqual([]);
+  });
+  it('"delete my health data" removes symptom check-ins and their follow-ups', async () => {
+    await as(C, `select delete_my_health_data()`);
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from symptom_logs where user_id = '${C}'`)).rows[0].n).toBe(0);
+    expect((await db.query<{ n: number }>(`select count(*)::int as n from symptom_followups where user_id = '${C}'`)).rows[0].n).toBe(0);
+  });
+});

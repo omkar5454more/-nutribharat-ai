@@ -354,3 +354,103 @@ export async function purgeOldHealthLogs(days: number): Promise<number> {
   must(error);
   return Number(data ?? 0);
 }
+
+// ---------------------------------------------------------------- symptom check-ins and follow-ups
+import { firstFollowUp, nextStep, FOLLOW_UP_DELAYS_MIN, type NextStep, type QuietHours, type Response, type Screening, type SymptomType } from '@/core/health/symptoms';
+
+export type SymptomLog = { id: string; type: SymptomType; startedAt: string; severity: number; screening: Screening; status: string; note: string | null };
+export type PendingFollowUp = { id: string; logId: string; dueAt: number; attempt: number; type: SymptomType };
+
+export function useSymptomLogs(uid: string | undefined, memberId: string | null) {
+  return useQuery({
+    queryKey: ['symptoms', uid, memberId],
+    enabled: !!uid,
+    queryFn: async (): Promise<SymptomLog[]> => {
+      const { data, error } = await (scoped(supabase.from('symptom_logs').select('*').eq('user_id', uid!) as any, memberId) as any).order('started_at', { ascending: false }).limit(30);
+      must(error);
+      return (data ?? []).map((r: any) => ({ id: r.id, type: r.symptom_type, startedAt: r.started_at, severity: r.severity, screening: r.screening, status: r.status, note: r.note ?? null }));
+    },
+  });
+}
+
+export function usePendingFollowUps(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['followups', uid],
+    enabled: !!uid,
+    refetchInterval: 30_000,
+    queryFn: async (): Promise<PendingFollowUp[]> => {
+      const f = await supabase.from('symptom_followups').select('*').eq('user_id', uid!).eq('status', 'pending');
+      must(f.error);
+      const l = await supabase.from('symptom_logs').select('*').eq('user_id', uid!);
+      must(l.error);
+      return (f.data ?? []).map((r: any) => ({ id: r.id, logId: r.log_id, dueAt: new Date(r.due_at).getTime(), attempt: r.attempt, type: ((l.data ?? []).find((x: any) => x.id === r.log_id)?.symptom_type ?? 'other') as SymptomType }));
+    },
+  });
+}
+
+/** Save a check-in. A follow-up is scheduled ONLY when the person asked for one and the safety screen did not call for care. */
+export async function createCheckIn(uid: string, memberId: string | null, c: { type: SymptomType; severity: number; screening: Screening; triggers?: string[]; associated?: string[]; note?: string; followDelayMin?: (typeof FOLLOW_UP_DELAYS_MIN)[number] | null; quiet: QuietHours }): Promise<string> {
+  const ins = await supabase.from('symptom_logs').insert({
+    user_id: uid, member_id: memberId, symptom_type: c.type, severity: c.severity, screening: c.screening,
+    triggers: c.triggers ?? [], associated: c.associated ?? [], note: c.note?.slice(0, 500) ?? null, status: 'open',
+  }).select('id').single();
+  must(ins.error);
+  const id = (ins.data as any).id as string;
+  if (c.followDelayMin && c.screening === 'usual') {
+    const plan = firstFollowUp(Date.now(), c.followDelayMin, c.quiet)!;
+    const { error } = await supabase.from('symptom_followups').insert({ log_id: id, user_id: uid, due_at: new Date(plan.dueAt).toISOString(), attempt: plan.attempt, status: 'pending' });
+    must(error);
+  }
+  return id;
+}
+
+/** Record the person's answer to a follow-up and apply the rules in `nextStep`. Returns what the screen should do next. */
+export async function answerFollowUp(uid: string, f: PendingFollowUp, response: Response, quiet: QuietHours): Promise<NextStep> {
+  const step = nextStep(response, f.attempt, Date.now(), quiet);
+  const upd = await supabase.from('symptom_followups').update({ status: 'answered', response, answered_at: new Date().toISOString() }).eq('id', f.id);
+  must(upd.error);
+  const logFields: Record<string, unknown> = { status: step.status };
+  if (step.status === 'better') logFields.resolved_at = new Date().toISOString();
+  const lg = await supabase.from('symptom_logs').update(logFields).eq('id', f.logId);
+  must(lg.error);
+  if (step.kind === 'check_again') {
+    const { error } = await supabase.from('symptom_followups').insert({ log_id: f.logId, user_id: uid, due_at: new Date(step.follow.dueAt).toISOString(), attempt: step.follow.attempt, status: 'pending' });
+    must(error);
+  }
+  if (step.kind === 'stopped' || step.kind === 'rescreen') {
+    const { error } = await supabase.from('symptom_followups').update({ status: 'cancelled' }).eq('log_id', f.logId).eq('status', 'pending');
+    must(error);
+  }
+  return step;
+}
+
+export async function stopAllReminders(uid: string) {
+  const { error } = await supabase.from('symptom_followups').update({ status: 'cancelled' }).eq('user_id', uid).eq('status', 'pending');
+  must(error);
+}
+
+export type NotifPrefs = { quiet: QuietHours; followups: boolean; meals: boolean; routine: boolean; wellness: boolean };
+export function useNotifPrefs(uid: string | undefined) {
+  return useQuery({
+    queryKey: ['notif-prefs', uid],
+    enabled: !!uid,
+    queryFn: async (): Promise<NotifPrefs> => {
+      const { data, error } = await supabase.from('notification_preferences').select('*').eq('user_id', uid!);
+      must(error);
+      const r: any = data?.[0];
+      return {
+        quiet: r && r.quiet_start_minute !== null && r.quiet_start_minute !== undefined ? { startMinute: r.quiet_start_minute, endMinute: r.quiet_end_minute } : { startMinute: 22 * 60, endMinute: 7 * 60 },
+        followups: r ? r.followups !== false : true, meals: r ? r.meals !== false : true, routine: r ? r.routine !== false : true, wellness: r ? !!r.wellness : false,
+      };
+    },
+  });
+}
+export async function saveNotifPrefs(uid: string, p: NotifPrefs) {
+  const del = await supabase.from('notification_preferences').delete().eq('user_id', uid);
+  must(del.error);
+  const { error } = await supabase.from('notification_preferences').insert({
+    user_id: uid, quiet_start_minute: p.quiet?.startMinute ?? null, quiet_end_minute: p.quiet?.endMinute ?? null,
+    followups: p.followups, meals: p.meals, routine: p.routine, wellness: p.wellness,
+  });
+  must(error);
+}

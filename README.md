@@ -50,8 +50,16 @@ The Anthropic key lives **only** here as a secret — never in the app, `.env` o
 ### Run locally against the real backend
 Copy `.env.example` to `.env` (already done here), then `npm install` and `npx expo start` (press `w` for web).
 
-### Android app file (APK) — optional
-Free Expo account, then `npx eas build -p android --profile preview` produces an installable `.apk`. Camera barcode scanning and install-from-file work there too. (Not set up yet: see "Before real users".)
+### Android app file (APK) — free, no Play Store account needed
+`eas.json` is set up. With a free Expo account (you log in yourself):
+```
+npm install -g eas-cli
+eas login
+eas build --platform android --profile preview
+```
+This produces an installable `.apk` and a link you can share with trusted testers (they must allow "install from unknown sources"). The same app can later be built as an app bundle for Google Play with `--profile production` (Play Store registration is a one-time US$25 fee — only needed for public release). Android package name: `com.nutribharat.ai` (change it before a real release if you want a different one).
+**Reminders on a phone build:** the web version shows reminders and check-in follow-ups only while the app is open. Scheduled local notifications on Android need `expo-notifications` (not added yet; it should be tested on a real device).
+Password-reset links and Google sign-in need extra setup for the APK (deep link / OAuth keys) — not done yet.
 
 ## Layout
 - `src/core/` — pure, unit-tested logic: food table, nutrition maths, goals, name matching, `planner.ts` (+ `prices.ts`), `progress.ts`, `wellness.ts`, `barcode.ts`.
