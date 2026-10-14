@@ -10,8 +10,9 @@ Runs as an **installable web app (PWA)** on Android and iPhone, and can also be 
 - **Meal planner** — a day of Indian meals for your targets, by region (Maharashtrian, North, South, Gujarati), diet (veg / egg / non-veg / vegan / Jain), allergies, and an optional **daily budget** (₹100 / 150 / 250).
 - **Progress** — weight trend with advice (flags unsafe fast loss), 7-day calories chart, streaks, **sleep and steps / exercise** (entered by hand).
 - **Family members** — track adults in your family (their consent is required; 18+ only), each with their own targets and data.
+- **Health coach (optional, consent-based)** — conditions you choose (PCOD/PCOS, migraine, high BP, diabetes, thyroid, cholesterol, anaemia, acidity), a rule-based safety layer, an editable **daily routine** on the Today tab (meals, water, movement, rest, your own medicine reminders), a **monthly Flex Day**, BP / sugar notes with emergency messages, and privacy tools (export, delete). See [docs/HEALTH-COACH.md](docs/HEALTH-COACH.md) — **clinical and legal wording still needs professional review**.
 - **AI nutrition chat** — answers general food questions using your goal and what you ate today.
-- **8 languages** — English, Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Gujarati (including food names).
+- **8 languages** — English, Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Gujarati (including food names). The health-coach screens are in English, Hindi and Marathi; the other five show English there for now.
 - Accounts: sign up, log in, forgot / reset password, delete my account and all data.
 
 ## See it in 1 minute (demo mode — no accounts, no keys)
@@ -54,13 +55,13 @@ Free Expo account, then `npx eas build -p android --profile preview` produces an
 
 ## Layout
 - `src/core/` — pure, unit-tested logic: food table, nutrition maths, goals, name matching, `planner.ts` (+ `prices.ts`), `progress.ts`, `wellness.ts`, `barcode.ts`.
-- `src/i18n/` — `en.ts` is the source of truth; every other language must define every key (a test enforces it, including `{placeholders}` and the doctor/dietitian referral in safety notes).
+- `src/i18n/` — `en.ts` is the source of truth; Hindi and Marathi must define every key and the other five every key except the health-coach ones (`h4.*`, shown in English until translated). A test enforces this, plus `{placeholders}` and the doctor/dietitian referral in safety notes.
 - `src/app/` — Expo Router screens. `src/lib/` — Supabase client, data hooks, demo backend, PWA helpers. `src/state/` — session, active family member, draft meal.
 - `public/` — PWA files (manifest, icons, service worker, `index.html` template).
 - `supabase/` — migrations, `all-in-one.sql`, edge functions, and SQL tests that run the migrations in an in-memory Postgres.
 
 ## Commands
-- `npm test` — unit tests, SQL / row-level-security tests, demo-backend tests (135).
+- `npm test` — unit tests, SQL / row-level-security tests, demo-backend tests (260+).
 - `npm run typecheck` — TypeScript.
 - `npm run sql` — rebuild `supabase/all-in-one.sql` (a test fails if it is stale).
 - `npm run demo` — the no-keys demo.
@@ -69,6 +70,7 @@ Free Expo account, then `npx eas build -p android --profile preview` produces an
 - **Food data**: `src/core/foods.ts` is a ~50-row *starter* table with approximate values (`source: 'seed'`). Replace / verify against **IFCT 2017** (NIN Hyderabad) under the correct licence. Prices in `prices.ts` are rough estimates.
 - **Translations** (Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Gujarati) were written by an AI. Have a native speaker and a dietitian review them, especially the safety notes. Messages returned by the edge functions are still English.
 - **Privacy & law**: only adults (18+) can use the app or be added as family members, because India's DPDP Act needs verifiable parental consent for children. Add a privacy policy, a consent screen and a data-retention statement. Meal photos and chat messages are not stored.
+- **Health coach**: thresholds, food rules, wording and privacy text are AI-drafted and must be reviewed by a clinician / dietitian and a lawyer first — details and the full list in [docs/HEALTH-COACH.md](docs/HEALTH-COACH.md). Apply migration `0004` (it is in `supabase/all-in-one.sql`) and re-deploy `nutrition-chat`.
 - **Medical boundaries**: general wellness guidance only. Have a qualified dietitian review the wording and the planner.
 - **Planner**: hand-written starter combinations. Allergies are only checked for milk, egg, fish, wheat/gluten, peanut — anything else is reported as "unchecked". Jain plans use a small curated set.
 - **Barcode data** comes from the community database Open Food Facts and can be wrong or missing (the app then asks you to type the label).

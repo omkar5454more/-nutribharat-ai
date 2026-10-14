@@ -186,6 +186,7 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
     if (path.endsWith('/functions/v1/analyze-food')) return json(SCAN_RESULT);
     if (path.endsWith('/functions/v1/nutrition-chat')) {
       const b = await body();
+      (globalThis as any).__demoChatCalls = [...((globalThis as any).__demoChatCalls ?? []), b];   // lets the browser tests inspect exactly what would be sent to the AI
       const last = [...(b.messages ?? [])].reverse().find((m: Row) => m.role === 'user')?.content ?? '';
       return json({ reply: chatReply(b.language, String(last)) });
     }

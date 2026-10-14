@@ -15,6 +15,8 @@ import { Linking } from 'react-native';
 import { Button } from '@/components/ui';
 
 const MAX_LEN = 1000;
+/** A message handled on the device (emergency / unsafe request). It, and the reply to it, are never sent to the AI. */
+type Msg = ChatMessage & { local?: boolean };
 
 export default function Chat() {
   const t = useT();
@@ -25,7 +27,7 @@ export default function Chat() {
   const targets = targetsFor(profile);
   const from = startOfDay();
   const meals = useMeals(uid, memberId, from, new Date(from.getTime() + 24 * 3600 * 1000));
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Msg[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
@@ -36,20 +38,20 @@ export default function Chat() {
     if (!content || busy) return;
     setError('');
     setText('');
-    const next: ChatMessage[] = [...messages, { role: 'user', content }];
+    const next: Msg[] = [...messages, { role: 'user', content }];
     setMessages(next);
     setEmergency(false);
     // safety first, on the device, before anything is sent: emergencies and unsafe requests never reach the AI
     const flag = detectRedFlags(content);
     if (flag.urgent) {
-      setMessages([...next, { role: 'assistant', content: t(flag.code === 'self_harm' ? 'h4.emergency.selfharm' : 'h4.emergency.symptom') }]);
+      setMessages([...next.slice(0, -1), { role: 'user', content, local: true }, { role: 'assistant', content: t(flag.code === 'self_harm' ? 'h4.emergency.selfharm' : 'h4.emergency.symptom'), local: true }]);
       setEmergency(true);
       logSafetyEvent(uid!, memberId, 'red_flag_symptom', 'urgent', { code: flag.code });
       return;
     }
     const req = checkRequest(content);
     if (req.blocked) {
-      setMessages([...next, { role: 'assistant', content: t(`h4.blocked.${req.code}` as Key) }]);
+      setMessages([...next.slice(0, -1), { role: 'user', content, local: true }, { role: 'assistant', content: t(`h4.blocked.${req.code}` as Key), local: true }]);
       logSafetyEvent(uid!, memberId, req.code === 'medication_boundary' ? 'medication_boundary' : 'blocked_request', 'warning', { code: req.code });
       return;
     }
@@ -58,7 +60,7 @@ export default function Chat() {
     try {
       // only what the assistant needs: no name, email or exact age is sent
       const reply = await askAssistant(
-        next.slice(-12),
+        next.filter((m) => !m.local).slice(-12).map(({ role, content: c }) => ({ role, content: c })),
         {
           goal: profile.goal, diet: profile.diet, allergies: profile.allergies, reproductive: profile.reproductive, age_band: 'adult',
           kcal_target: targets.kcal, kcal_eaten: eaten.kcal, protein_target: targets.protein_g, protein_eaten: Math.round(eaten.protein_g),
