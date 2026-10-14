@@ -9,6 +9,7 @@ import { saveMeal, useInvalidateMeals, type MealType } from '@/lib/data';
 import { colors } from '@/lib/theme';
 import { useDraft } from '@/state/draft';
 import { useActive } from '@/lib/active';
+import { ScanConsiderations } from '@/components/ScanConsiderations';
 
 const TYPES: MealType[] = ['breakfast', 'lunch', 'snack', 'dinner'];
 
@@ -97,6 +98,8 @@ export default function Review() {
         <Button title={t('review.oil')} variant="secondary" onPress={() => d.add(FOOD_BY_ID['ghee-oil'], 5)} />
       </View>
       <Muted>{t('review.oilHint')}</Muted>
+
+      <ScanConsiderations items={d.items} />
 
       <Card>
         <H2>{t('review.total')}</H2>

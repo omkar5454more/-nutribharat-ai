@@ -263,8 +263,8 @@ export type ChatContext = {
   kcal_target: number; kcal_eaten: number; protein_target: number; protein_eaten: number;
 };
 
-export async function askAssistant(messages: ChatMessage[], context: ChatContext, language: string): Promise<string> {
-  const { data, error } = await supabase.functions.invoke('nutrition-chat', { body: { messages, context, language } });
+export async function askAssistant(messages: ChatMessage[], context: ChatContext, language: string, health: unknown = null): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('nutrition-chat', { body: { messages, context, language, ...(health ? { health } : {}) } });
   if (error) {
     let msg = '';
     try { const b = await (error as any).context?.json?.(); if (b?.error) msg = b.error; } catch { /* use default */ }

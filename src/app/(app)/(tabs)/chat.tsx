@@ -7,6 +7,12 @@ import { useLang, useT, type Key } from '@/i18n';
 import { useActive } from '@/lib/active';
 import { askAssistant, startOfDay, targetsFor, totalsOf, useMeals, type ChatMessage } from '@/lib/data';
 import { colors, radius } from '@/lib/theme';
+import { aiHealthSummary } from '@/core/health/aiSummary';
+import { checkRequest, detectRedFlags } from '@/core/health/safety';
+import { logSafetyEvent } from '@/lib/health';
+import { useHealthContext } from '@/lib/healthCtx';
+import { Linking } from 'react-native';
+import { Button } from '@/components/ui';
 
 const MAX_LEN = 1000;
 
@@ -14,6 +20,8 @@ export default function Chat() {
   const t = useT();
   const lang = useLang((s) => s.lang);
   const { uid, memberId, profile } = useActive();
+  const health = useHealthContext();
+  const [emergency, setEmergency] = useState(false);
   const targets = targetsFor(profile);
   const from = startOfDay();
   const meals = useMeals(uid, memberId, from, new Date(from.getTime() + 24 * 3600 * 1000));
@@ -30,6 +38,21 @@ export default function Chat() {
     setText('');
     const next: ChatMessage[] = [...messages, { role: 'user', content }];
     setMessages(next);
+    setEmergency(false);
+    // safety first, on the device, before anything is sent: emergencies and unsafe requests never reach the AI
+    const flag = detectRedFlags(content);
+    if (flag.urgent) {
+      setMessages([...next, { role: 'assistant', content: t(flag.code === 'self_harm' ? 'h4.emergency.selfharm' : 'h4.emergency.symptom') }]);
+      setEmergency(true);
+      logSafetyEvent(uid!, memberId, 'red_flag_symptom', 'urgent', { code: flag.code });
+      return;
+    }
+    const req = checkRequest(content);
+    if (req.blocked) {
+      setMessages([...next, { role: 'assistant', content: t(`h4.blocked.${req.code}` as Key) }]);
+      logSafetyEvent(uid!, memberId, req.code === 'medication_boundary' ? 'medication_boundary' : 'blocked_request', 'warning', { code: req.code });
+      return;
+    }
     setBusy(true);
     const eaten = totalsOf(meals.data ?? []);
     try {
@@ -40,7 +63,8 @@ export default function Chat() {
           goal: profile.goal, diet: profile.diet, allergies: profile.allergies, reproductive: profile.reproductive, age_band: 'adult',
           kcal_target: targets.kcal, kcal_eaten: eaten.kcal, protein_target: targets.protein_g, protein_eaten: Math.round(eaten.protein_g),
         },
-        lang
+        lang,
+        aiHealthSummary(health.health, health.consents.ai_processing && health.consents.condition_tracking)
       );
       setMessages([...next, { role: 'assistant', content: reply }]);
     } catch (e) {
@@ -84,6 +108,8 @@ export default function Chat() {
               <Muted>{t('chat.thinking')}</Muted>
             </View>
           ) : null}
+          {emergency ? <Button title={t('h4.emergency.call')} variant="danger" onPress={() => { Linking.openURL('tel:112').catch(() => {}); }} /> : null}
+          {health.consents.ai_processing && health.consents.condition_tracking && health.health.conditions.length ? <Muted style={{ fontSize: 12 }}>{t('h4.chat.sharing')}</Muted> : null}
           {error ? <Notice>{error}</Notice> : null}
           <Muted style={{ fontSize: 12 }}>{t('chat.disclaimer')}</Muted>
         </ScrollView>
