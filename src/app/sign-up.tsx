@@ -1,6 +1,7 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { Button, Field, H1, Muted, Notice, Screen } from '@/components/ui';
+import { AuthShell, PasswordField, StrengthMeter } from '@/components/AuthShell';
+import { Button, Field, Muted, Notice } from '@/components/ui';
 import { useT } from '@/i18n';
 import { appUrl } from '@/lib/pwa';
 import { supabase } from '@/lib/supabase';
@@ -32,16 +33,16 @@ export default function SignUp() {
   }
 
   return (
-    <Screen>
-      <H1>{t('auth.createTitle')}</H1>
+    <AuthShell title={t('h4.auth.join')} subtitle={t('h4.auth.joinSub')}>
       <Field label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" error={errors.email} />
-      <Field label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="new-password" error={errors.password} />
-      <Field label={t('auth.confirm')} value={confirm} onChangeText={setConfirm} secureTextEntry autoComplete="new-password" error={errors.confirm} />
+      <PasswordField label={t('auth.password')} value={password} onChangeText={setPassword} autoComplete="new-password" error={errors.password} />
+      <StrengthMeter password={password} />
+      <PasswordField label={t('auth.confirm')} value={confirm} onChangeText={setConfirm} autoComplete="new-password" error={errors.confirm} />
       <Muted>{t('auth.disclaimer')}</Muted>
       {errors.form ? <Notice>{errors.form}</Notice> : null}
       {message ? <Notice tone="info">{message}</Notice> : null}
       <Button title={t('auth.createAccount')} onPress={submit} loading={busy} />
-      <Link href="/sign-in" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 8 }}>{t('auth.haveAccount')}</Link>
-    </Screen>
+      <Link href="/sign-in" style={{ color: '#16693A', fontWeight: '700', paddingVertical: 4, textAlign: 'center' }}>{t('auth.haveAccount')}</Link>
+    </AuthShell>
   );
 }

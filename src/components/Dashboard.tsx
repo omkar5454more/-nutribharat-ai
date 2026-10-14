@@ -183,3 +183,40 @@ export function ForYou() {
     </View>
   );
 }
+
+const MOODS: { e: string; key: 'great' | 'good' | 'okay' | 'low' | 'bad'; bg: string }[] = [
+  { e: '😄', key: 'great', bg: '#D9F0E3' }, { e: '🙂', key: 'good', bg: '#E3F0D9' }, { e: '😐', key: 'okay', bg: '#FDE9C9' }, { e: '😔', key: 'low', bg: '#F9D8E3' }, { e: '😣', key: 'bad', bg: '#F7CFCF' },
+];
+
+/** A friendly mood tap. It only answers kindly and, for a low mood, offers the check-in; it saves nothing by itself. */
+export function MoodRow() {
+  const t = useT();
+  const router = useRouter();
+  const [picked, setPicked] = useState<(typeof MOODS)[number]['key'] | null>(null);
+  return (
+    <View style={{ gap: 10 }}>
+      <Text style={{ fontSize: 18, fontWeight: '800', color: colors.text }}>{t('h4.mood.title')}</Text>
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        {MOODS.map((m) => {
+          const on = picked === m.key;
+          return (
+            <PressScale key={m.key} onPress={() => setPicked(m.key)} accessibilityRole="button" accessibilityLabel={`mood ${m.key}`} scaleTo={0.85}
+              style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: on ? m.bg : '#fff', borderWidth: on ? 2 : 0, borderColor: '#5B4FA8', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 14px rgba(60,50,120,0.08)' } as object}>
+              <Text style={{ fontSize: on ? 30 : 26 }}>{m.e}</Text>
+            </PressScale>
+          );
+        })}
+      </View>
+      {picked ? (
+        <FadeIn y={6}>
+          <View style={{ backgroundColor: '#fff', borderRadius: radius.md, padding: 12, gap: 8 }}>
+            <Text style={{ color: colors.text }}>{t(`h4.mood.${picked}` as Key)}</Text>
+            {picked === 'low' || picked === 'bad' ? (
+              <Pressable onPress={() => router.push({ pathname: '/check-in', params: { type: 'stress' } })} accessibilityRole="button"><Text style={{ color: colors.primaryDark, fontWeight: '700' }}>{t('h4.ci.title')} →</Text></Pressable>
+            ) : null}
+          </View>
+        </FadeIn>
+      ) : null}
+    </View>
+  );
+}

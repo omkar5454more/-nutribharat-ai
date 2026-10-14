@@ -754,6 +754,28 @@ export const en = {
   'h4.gym.thisWeek': '{n} of {total} workouts this week',
   'h4.prof.gym': 'Gym schedule',
   'h4.gym.tomorrow': 'Tomorrow',
+
+  'h4.auth.hero': 'Your personal AI health companion',
+  'h4.auth.pill1': 'Scan your food',
+  'h4.auth.pill2': 'Daily routine',
+  'h4.auth.pill3': 'Gym plan',
+  'h4.auth.pill4': 'Caring check-ins',
+  'h4.auth.welcome': 'Welcome back 👋',
+  'h4.auth.welcomeSub': 'Sign in to continue your healthy day.',
+  'h4.auth.join': 'Start your healthy journey',
+  'h4.auth.joinSub': 'It takes less than a minute.',
+  'h4.auth.show': 'Show',
+  'h4.auth.hide': 'Hide',
+  'h4.auth.weak': 'Weak password',
+  'h4.auth.ok': 'Okay password',
+  'h4.auth.strong': 'Strong password',
+  'h4.mood.title': 'How are you feeling today?',
+  'h4.mood.great': 'Wonderful! Keep that energy going 💚',
+  'h4.mood.good': 'Nice. A glass of water and a short walk can make it even better.',
+  'h4.mood.okay': 'That is okay. Take it one small step at a time.',
+  'h4.mood.low': 'I am sorry. Be kind to yourself today. Want to log how you feel?',
+  'h4.mood.bad': 'I am sorry you feel this way. Would you like to log how you feel? If it is serious, please talk to someone you trust or a doctor.',
+  'h4.water.glasses': 'Tap a glass to log water',
 } as const;
 
 export type Key = keyof typeof en;

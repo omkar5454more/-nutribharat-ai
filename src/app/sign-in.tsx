@@ -1,8 +1,7 @@
 import { Link } from 'expo-router';
 import { useState } from 'react';
-import { View } from 'react-native';
-import { LanguagePicker } from '@/components/common';
-import { Button, Field, H1, Muted, Notice, Screen } from '@/components/ui';
+import { AuthShell, PasswordField } from '@/components/AuthShell';
+import { Button, Field, Notice } from '@/components/ui';
 import { useT } from '@/i18n';
 import { supabase } from '@/lib/supabase';
 
@@ -23,17 +22,13 @@ export default function SignIn() {
   }
 
   return (
-    <Screen>
-      <View style={{ height: 24 }} />
-      <H1>{t('app.name')}</H1>
-      <Muted>{t('app.tagline')}</Muted>
-      <LanguagePicker />
+    <AuthShell title={t('h4.auth.welcome')} subtitle={t('h4.auth.welcomeSub')}>
       <Field label={t('auth.email')} value={email} onChangeText={setEmail} autoCapitalize="none" keyboardType="email-address" autoComplete="email" />
-      <Field label={t('auth.password')} value={password} onChangeText={setPassword} secureTextEntry autoComplete="password" onSubmitEditing={submit} />
+      <PasswordField label={t('auth.password')} value={password} onChangeText={setPassword} autoComplete="password" onSubmitEditing={submit} />
       {error ? <Notice>{error}</Notice> : null}
       <Button title={t('auth.signIn')} onPress={submit} loading={busy} />
-      <Link href="/forgot-password" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 8 }}>{t('auth.forgot')}</Link>
-      <Link href="/sign-up" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 8 }}>{t('auth.newHere')}</Link>
-    </Screen>
+      <Link href="/forgot-password" style={{ color: '#16693A', fontWeight: '600', paddingVertical: 4, textAlign: 'center' }}>{t('auth.forgot')}</Link>
+      <Link href="/sign-up" style={{ color: '#16693A', fontWeight: '700', paddingVertical: 4, textAlign: 'center' }}>{t('auth.newHere')}</Link>
+    </AuthShell>
   );
 }

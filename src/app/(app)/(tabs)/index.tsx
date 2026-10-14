@@ -1,11 +1,12 @@
 import { useQueryClient } from '@tanstack/react-query';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
-import { Text, View } from 'react-native';
+import { Pressable, Text, View } from 'react-native';
+import { CountUp, Ring } from '@/components/motion';
 import { Notes } from '@/components/common';
 import { MemberSwitcher } from '@/components/MemberSwitcher';
 import { RoutineView } from '@/components/RoutineView';
-import { AssistantTasks, DashHeader, ForYou, LogToday } from '@/components/Dashboard';
+import { AssistantTasks, DashHeader, ForYou, LogToday, MoodRow } from '@/components/Dashboard';
 import { FollowUpCard } from '@/components/CareCards';
 import { Button, Card, H1, H2, Muted, Notice, ProgressBar, Screen } from '@/components/ui';
 import { useFoodLabel, useT, type Key } from '@/i18n';
@@ -48,18 +49,26 @@ export default function Today() {
       <MemberSwitcher />
       <AssistantTasks />
       <LogToday />
+      <MoodRow />
       <ForYou />
 
       <FollowUpCard />
       <RoutineView />
 
       <Card>
-        <Muted>{t('today.calories')}</Muted>
-        <Text style={{ fontSize: 34, fontWeight: '800', color: colors.text }}>
-          {eaten.kcal} <Text style={{ fontSize: 16, fontWeight: '600', color: colors.muted }}>/ {targets.kcal} kcal</Text>
-        </Text>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}>
+          <Ring size={112} stroke={12} progress={eaten.kcal / Math.max(targets.kcal, 1)} color={eaten.kcal > targets.kcal ? colors.danger : colors.primary}>
+            <CountUp value={Math.round((eaten.kcal / Math.max(targets.kcal, 1)) * 100)} format={(n) => `${Math.round(n)}%`} style={{ fontSize: 20, fontWeight: '800', color: colors.text }} />
+          </Ring>
+          <View style={{ flex: 1, gap: 4 }}>
+            <Muted>{t('today.calories')}</Muted>
+            <Text style={{ fontSize: 30, fontWeight: '800', color: colors.text }}>
+              {eaten.kcal} <Text style={{ fontSize: 15, fontWeight: '600', color: colors.muted }}>/ {targets.kcal} kcal</Text>
+            </Text>
+            <Muted>{left >= 0 ? t('today.left', { n: left }) : t('today.over', { n: -left })}</Muted>
+          </View>
+        </View>
         <ProgressBar value={eaten.kcal} max={targets.kcal} />
-        <Muted>{left >= 0 ? t('today.left', { n: left }) : t('today.over', { n: -left })}</Muted>
       </Card>
 
       <Card>
@@ -74,6 +83,20 @@ export default function Today() {
           <Muted>{t('water.progress', { a: (drunk / 1000).toFixed(2).replace(/\.?0+$/, '') || '0', b: (targets.water_ml / 1000).toFixed(1) })}</Muted>
         </View>
         <ProgressBar value={drunk} max={targets.water_ml} color="#3B9AD9" />
+        <Muted>{t('h4.water.glasses')}</Muted>
+        <View style={{ flexDirection: 'row', gap: 6, justifyContent: 'space-between' }}>
+          {Array.from({ length: Math.max(6, Math.min(12, Math.round(targets.water_ml / GLASS_ML))) }, (_, i) => {
+            const filled = i < Math.round(drunk / GLASS_ML);
+            const isNext = i === Math.round(drunk / GLASS_ML);
+            const isLast = i === Math.round(drunk / GLASS_ML) - 1;
+            return (
+              <Pressable key={i} onPress={() => (isNext ? changeWater('add') : isLast ? changeWater('undo') : undefined)} accessibilityRole="button" accessibilityLabel={`glass ${i + 1}`}
+                style={{ flex: 1, height: 38, borderRadius: 10, backgroundColor: filled ? '#7CC2EE' : '#E8F3FB', borderWidth: isNext ? 1.5 : 0, borderColor: '#3B9AD9', alignItems: 'center', justifyContent: 'center' }}>
+                <Text style={{ fontSize: 14 }}>{filled ? '💧' : ''}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
         {waterError ? <Notice>{waterError}</Notice> : null}
         <View style={{ flexDirection: 'row', gap: 8 }}>
           <View style={{ flex: 1 }}><Button title={t('water.add')} variant="secondary" onPress={() => changeWater('add')} /></View>
