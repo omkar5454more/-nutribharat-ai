@@ -7,12 +7,13 @@ import { FOOD_BY_ID } from '@/core/foods';
 import { nutrientsFor } from '@/core/nutrition';
 
 type Row = Record<string, any>;
-type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; members: Row[]; sleep_logs: Row[]; activity_logs: Row[]; seq: number };
-const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs'] as const;
+const HEALTH_TABLES = ['health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events'] as const;
+type Db = { users: Row[]; profiles: Row[]; meals: Row[]; meal_items: Row[]; water_logs: Row[]; weight_logs: Row[]; members: Row[]; sleep_logs: Row[]; activity_logs: Row[]; seq: number } & Record<(typeof HEALTH_TABLES)[number], Row[]>;
+const LOG_TABLES = ['meals', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'routine_preferences', 'daily_routines', 'routine_reminders', 'monthly_flex_days', 'health_consents', 'user_health_conditions', 'recommendation_safety_events'] as const;
 export type Store = { getItem(k: string): string | null; setItem(k: string, v: string): void; removeItem(k: string): void };
 
 const KEY = 'nutribharat.demo.db';
-const empty = (): Db => ({ users: [], profiles: [], meals: [], meal_items: [], water_logs: [], weight_logs: [], members: [], sleep_logs: [], activity_logs: [], seq: 1 });
+const empty = (): Db => ({ users: [], profiles: [], meals: [], meal_items: [], water_logs: [], weight_logs: [], members: [], sleep_logs: [], activity_logs: [], seq: 1, ...(Object.fromEntries(HEALTH_TABLES.map((t) => [t, []])) as any) });
 
 const b64 = (o: unknown) => btoa(JSON.stringify(o)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_');
 const fakeJwt = (sub: string) => `${b64({ alg: 'HS256', typ: 'JWT' })}.${b64({ sub, role: 'authenticated', exp: Math.floor(Date.now() / 1000) + 30 * 86400 })}.demo`;
@@ -194,11 +195,31 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
 
     if (path.endsWith('/rest/v1/rpc/delete_my_account')) {
       const id = user.id;
-      for (const t of ['profiles', 'meals', 'meal_items', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs'] as const) db[t] = db[t].filter((r) => (r.user_id ?? r.id) !== id);
+      for (const t of ['profiles', 'meals', 'meal_items', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', ...HEALTH_TABLES] as const) db[t] = db[t].filter((r) => (r.user_id ?? r.id) !== id);
       db.members = db.members.filter((m) => m.owner_id !== id);
       db.users = db.users.filter((u) => u.id !== id);
       save(db);
       return empty204();
+    }
+
+    if (path.endsWith('/rest/v1/rpc/delete_my_health_data')) {
+      for (const t of ['condition_triggers', 'clinician_instructions', 'health_measurement_logs', 'user_health_conditions', 'recommendation_safety_events', 'health_consents'] as const) db[t] = db[t].filter((r) => r.user_id !== user.id);
+      db.condition_details = db.condition_details.filter((d) => d.user_id !== user.id);
+      db.routine_reminders = db.routine_reminders.filter((r) => !(r.user_id === user.id && r.kind === 'medication'));
+      save(db);
+      return empty204();
+    }
+    if (path.endsWith('/rest/v1/rpc/purge_my_health_logs')) {
+      const b = await body();
+      const cutoff = now().getTime() - Number(b.older_than_days ?? 180) * 86400000;
+      let n = 0;
+      for (const [t, col] of [['recommendation_safety_events', 'created_at'], ['health_measurement_logs', 'measured_at']] as const) {
+        const before = db[t].length;
+        db[t] = db[t].filter((r) => !(r.user_id === user.id && new Date(r[col]).getTime() < cutoff));
+        n += before - db[t].length;
+      }
+      save(db);
+      return json(n);
     }
 
     const table = /\/rest\/v1\/(\w+)$/.exec(path)?.[1] as keyof Omit<Db, 'seq' | 'users'> | undefined;
@@ -233,6 +254,11 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
         if (table === 'weight_logs') {
           db.weight_logs = db.weight_logs.filter((w) => !(w.user_id === user.id && w.logged_on === row.logged_on));
         }
+        if (table === 'condition_details' || table === 'routine_activities' || table === 'routine_completions' || table === 'flex_day_food_choices') r.user_id = user.id;
+        if ((HEALTH_TABLES as readonly string[]).includes(table)) {
+          r.created_at = r.created_at ?? now().toISOString();
+          if (table === 'health_measurement_logs') r.measured_at = r.measured_at ?? now().toISOString();
+        }
         r.id = r.id ?? `demo-${table}-${db.seq++}`;
         db[table].push(r);
         inserted.push(r);
@@ -256,6 +282,14 @@ export function createDemoFetch(store: Store, now: () => Date = () => new Date()
       const doomed = new Set(applyFilters(db[table].filter(mine), url.searchParams).map((r) => r.id));
       db[table] = db[table].filter((r) => !doomed.has(r.id)) as any;
       if (table === 'meals') db.meal_items = db.meal_items.filter((i) => !doomed.has(i.meal_id));
+      if (table === 'user_health_conditions') db.condition_details = db.condition_details.filter((d) => !doomed.has(d.condition_id));
+      if (table === 'daily_routines') {
+        const acts = new Set(db.routine_activities.filter((a) => doomed.has(a.routine_id)).map((a) => a.id));
+        db.routine_activities = db.routine_activities.filter((a) => !doomed.has(a.routine_id));
+        db.routine_completions = db.routine_completions.filter((c) => !acts.has(c.activity_id));
+      }
+      if (table === 'routine_activities') db.routine_completions = db.routine_completions.filter((c) => !doomed.has(c.activity_id));
+      if (table === 'monthly_flex_days') db.flex_day_food_choices = db.flex_day_food_choices.filter((c) => !doomed.has(c.flex_day_id));
       if (table === 'members') {
         // a removed family member takes all of their logs with them
         for (const t of LOG_TABLES) db[t] = db[t].filter((r) => !doomed.has(r.member_id)) as any;
