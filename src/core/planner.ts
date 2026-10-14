@@ -1,6 +1,8 @@
 import { FOOD_BY_ID } from './foods';
 import { makeItem, mealTotals, sumNutrients } from './nutrition';
 import { costOf } from './prices';
+import { tagsOf } from './health/foodTags';
+import type { Constraints } from './health/safety';
 import type { Food, MealItem, Nutrients, Targets } from './types';
 
 export type Region = 'any' | 'maharashtrian' | 'north' | 'south' | 'gujarati';
@@ -118,7 +120,25 @@ export type DayPlan = {
   totalCost: number;
   /** true when a daily budget was given but the cheapest suitable plan still costs more than it */
   overBudget: boolean;
+  /** slots where the health rules could not all be met with the available meals, so the closest option was used */
+  relaxedSlots: Slot[];
 };
+
+/** Dishes that need a lot of cooking time; a combination without any of them counts as "quick". */
+const SLOW_DISHES = new Set(['veg-biryani', 'chicken-biryani', 'rajma', 'chana-masala', 'dal-makhani', 'paneer-curry', 'palak-paneer', 'butter-chicken', 'chicken-curry', 'fish-curry', 'misal',
+  'sabudana-khichdi', 'masala-dosa', 'dosa', 'idli', 'vada-south', 'bhakri', 'thepla', 'paratha', 'aloo-paratha', 'aloo-gobi']);
+const isQuick = (c: Combo) => c.parts.every(([id]) => !SLOW_DISHES.has(id));
+
+const comboTags = (c: Combo) => c.parts.flatMap(([id]) => tagsOf(id));
+const hasAvoided = (c: Combo, k: Constraints) => comboTags(c).some((t) => k.avoidTags.has(t));
+/** Soft preference from health rules: a little worse for each LIMIT tag, a little better for each PREFER tag (never decisive on its own). */
+function healthPenalty(c: Combo, k: Constraints | null): number {
+  if (!k) return 0;
+  const tags = comboTags(c);
+  const limit = tags.filter((t) => k.limitTags.has(t)).length;
+  const prefer = new Set(tags.filter((t) => k.preferTags.has(t))).size;
+  return limit * 0.08 - Math.min(prefer, 3) * 0.04;
+}
 
 function mulberry32(seed: number) {
   let a = seed >>> 0;
@@ -148,8 +168,12 @@ export function planDay(opts: {
   seed?: number;
   /** daily food budget in rupees; when set the planner prefers combinations that fit it */
   budget?: number;
+  /** health rules for this person (avoid / limit / prefer foods); null for none */
+  constraints?: Constraints | null;
+  /** 'quick' keeps to dishes that take little cooking */
+  cooking?: 'quick' | 'normal' | 'long';
 }): DayPlan {
-  const { targets, diet, region, allergies = [], seed = 1, budget } = opts;
+  const { targets, diet, region, allergies = [], seed = 1, budget, constraints = null, cooking = 'normal' } = opts;
   let carry = 0; // unspent budget from earlier meals can be used by later ones
   let anyOver = false;
   const rnd = mulberry32(seed);
@@ -166,6 +190,7 @@ export function planDay(opts: {
   const used = new Set<Combo>();
   const slots: PlannedSlot[] = [];
   const emptySlots: Slot[] = [];
+  const relaxedSlots: Slot[] = [];
   for (const slot of ['breakfast', 'lunch', 'snack', 'dinner'] as Slot[]) {
     const target_kcal = Math.round(targets.kcal * SLOT_SHARE[slot]);
     const targetProtein = targets.protein_g * SLOT_SHARE[slot];
@@ -176,6 +201,17 @@ export function planDay(opts: {
       emptySlots.push(slot);
       continue;
     }
+    if (cooking === 'quick') {
+      const quick = pool.filter(isQuick);
+      if (quick.length) pool = quick;
+    }
+    if (constraints && constraints.avoidTags.size) {
+      // health rules: use only combinations with nothing the person must avoid; look wider before giving up
+      let ok = pool.filter((c) => !hasAvoided(c, constraints));
+      if (!ok.length) ok = allowed(true).filter((c) => c.slot === slot && !hasAvoided(c, constraints));
+      if (ok.length) pool = ok;
+      else relaxedSlots.push(slot);                                         // nothing fits every rule: take the closest and say so
+    }
     // prefer region-specific combinations over the generic ones when a region is chosen
     const scored = pool
       .map((c) => {
@@ -183,7 +219,7 @@ export function planDay(opts: {
         const t = mealTotals(items);
         const err = Math.abs(t.kcal - target_kcal) / Math.max(target_kcal, 1) + Math.max(0, targetProtein - t.protein_g) / Math.max(targetProtein, 1) * 0.5;
         const cost = items.reduce((a, i) => a + costOf(i.foodId, i.grams), 0);
-        return { c, items, t, cost, score: err - (region !== 'any' && c.region === region ? 0.15 : 0) };
+        return { c, items, t, cost, score: err - (region !== 'any' && c.region === region ? 0.15 : 0) + healthPenalty(c, constraints) };
       })
       .sort((a, b) => a.score - b.score);
     let choices = scored;
@@ -202,5 +238,5 @@ export function planDay(opts: {
     slots.push({ slot, items: pick.items, totals: pick.t, target_kcal, cost: Math.round(pick.cost) });
   }
   const totalCost = Math.round(slots.reduce((a, s) => a + s.cost, 0));
-  return { slots, totals: sumNutrients(slots.map((s) => s.totals)), uncheckedAllergies: unchecked, emptySlots, totalCost, overBudget: budget !== undefined && (anyOver || totalCost > budget) };
+  return { slots, totals: sumNutrients(slots.map((s) => s.totals)), uncheckedAllergies: unchecked, emptySlots, totalCost, overBudget: budget !== undefined && (anyOver || totalCost > budget), relaxedSlots };
 }

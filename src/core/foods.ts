@@ -58,6 +58,7 @@ const rows: Row[] = [
   ['moong-chilla', 'Moong Dal Chilla', ['chilla', 'cheela', 'besan chilla', 'pudla'], 'north', 'veg', 170, 9, 20, 6, 3, [['1 chilla', 70]]],
   ['gulab-jamun', 'Gulab Jamun', ['gulabjamun'], 'street', 'veg', 319, 5, 50, 11, 0.5, [['1 piece', 40]]],
   ['jalebi', 'Jalebi', ['jilebi'], 'street', 'veg', 374, 2, 60, 14, 0, [['1 piece', 30]]],
+  ['pizza', 'Pizza', ['pizza slice', 'piza', 'cheese pizza'], 'street', 'veg', 266, 11, 33, 10, 2.3, [['1 slice', 107], ['2 slices', 214]]],
   ['banana', 'Banana', ['kela', 'banana ripe'], 'basic', 'vegan', 89, 1.1, 22.8, 0.3, 2.6, [['1 medium', 100]]],
   ['apple', 'Apple', ['seb'], 'basic', 'vegan', 52, 0.3, 13.8, 0.2, 2.4, [['1 medium', 150]]],
   ['ghee-oil', 'Ghee / Cooking oil (added)', ['ghee', 'oil', 'tel', 'butter', 'tup'], 'basic', 'veg', 900, 0, 0, 100, 0, [['1 tsp', 5], ['1 tbsp', 14]]],

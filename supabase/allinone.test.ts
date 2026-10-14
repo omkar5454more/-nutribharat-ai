@@ -26,7 +26,8 @@ describe('supabase/all-in-one.sql', () => {
     const { rows } = await db.query<{ relname: string; relrowsecurity: boolean }>(
       `select relname, relrowsecurity from pg_class c join pg_namespace n on n.oid = c.relnamespace where n.nspname = 'public' and relkind = 'r'`
     );
-    expect(rows.map((r) => r.relname).sort()).toEqual(['activity_logs', 'members', 'meal_items', 'meals', 'profiles', 'scan_usage', 'sleep_logs', 'water_logs', 'weight_logs'].sort());
+    const names = rows.map((r) => r.relname);
+    for (const t of ['profiles', 'meals', 'meal_items', 'members', 'water_logs', 'weight_logs', 'sleep_logs', 'activity_logs', 'scan_usage', 'health_consents', 'user_health_conditions', 'condition_details', 'condition_triggers', 'health_measurement_logs', 'clinician_instructions', 'daily_routines', 'routine_activities', 'routine_completions', 'routine_reminders', 'routine_preferences', 'monthly_flex_days', 'flex_day_food_choices', 'recommendation_safety_events']) expect(names, t).toContain(t);
     expect(rows.every((r) => r.relrowsecurity)).toBe(true);
   });
 });
