@@ -47,7 +47,8 @@ export function PressScale({ children, style, scaleTo = 0.97, ...rest }: Pressab
   const v = useRef(new Animated.Value(1)).current;
   const to = (n: number) => !reduced && Animated.spring(v, { toValue: n, speed: 40, bounciness: 6, useNativeDriver: native }).start();
   return (
-    <Pressable {...rest} onPressIn={(e) => { to(scaleTo); rest.onPressIn?.(e); }} onPressOut={(e) => { to(1); rest.onPressOut?.(e); }}>
+    <Pressable {...rest} style={{ maxWidth: '100%', flexShrink: 1 }} onPressIn={(e) => { to(scaleTo); rest.onPressIn?.(e); }} onPressOut={(e) => { to(1); rest.onPressOut?.(e); }}>
+      {/* maxWidth/flexShrink keep long labels (and the text inside) wrapping instead of running off a small screen */}
       <Animated.View style={[{ transform: [{ scale: v }] }, style]}>{children}</Animated.View>
     </Pressable>
   );

@@ -30,7 +30,7 @@ export default function AppLayout() {
       <Stack.Screen name="check-in" options={{ title: t('h4.ci.title') }} />
       <Stack.Screen name="comfort" options={{ headerShown: false, gestureEnabled: false, animation: 'none' }} />
       <Stack.Screen name="gym" options={{ title: t('h4.gym.title') }} />
-      <Stack.Screen name="setup" options={{ title: t('h4.setup.routine'), headerBackVisible: false, gestureEnabled: false }} />
+      <Stack.Screen name="setup" options={{ title: t('app.name'), headerBackVisible: false, gestureEnabled: false }} />
     </Stack>
     </>
   );
