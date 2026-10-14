@@ -1,71 +1,75 @@
 # NutriBharat AI
 
 Eat smart. Stay fit. Live healthy. — an AI nutrition companion for Indian food (React Native + Expo + Supabase, all TypeScript).
+Runs as an **installable web app (PWA)** on Android and iPhone, and can also be built as an Android app.
 
-**Release 1 (MVP):** sign up / log in, onboarding, daily calorie + macro targets, AI food-photo scanning,
-editable meal logging, dashboard, history, profile, delete-my-account.
-
-**Release 2 (this branch):** water tracker, weight tracking + trend advice, 7-day progress analytics, regional Indian meal planner
-(vegetarian / vegan / egg / Jain, allergy-aware), AI nutrition chat, and the whole app in **English, Hindi and Marathi**.
-
-## How the scanner stays honest
-1. The phone shrinks the photo and sends it to the `analyze-food` Supabase Edge Function.
-2. The function asks Claude to **name the dishes and estimate grams only**. It never returns calories.
-3. The app matches each name to its own food table (`src/core/foods.ts`) and **calculates** nutrition from grams × per-100 g values.
-4. The user confirms or corrects foods, portions and extra oil on the review screen before anything is saved.
-Dishes the app can't match are flagged, never guessed.
-
-## Layout
-- `src/core/` — pure logic, unit-tested: food table, nutrition maths, goal calculator (with safety limits), name matching, AI-result schema, `planner.ts` (meal plans), `progress.ts` (weight trend, week summary).
-- `src/i18n/` — `en.ts` is the source of truth; `hi.ts` / `mr.ts` must define every key (a test enforces it, including `{placeholders}`), plus Hindi/Marathi food names.
-- `src/app/` — Expo Router screens (`sign-in`, `sign-up`, `onboarding`, `(app)/(tabs)/…`, `scan`, `review`, `add-food`).
-- `src/lib/` — Supabase client, data hooks, theme. `src/state/` — session + draft meal.
-- `supabase/migrations/` — `0001_init.sql` (tables, row-level security, `delete_my_account()`), `0002_v2.sql` (water, weight, usage kinds). Run both, in order.
-- `supabase/functions/analyze-food/` and `nutrition-chat/` — the AI calls (Deno). The Anthropic key lives only here.
+## What it does
+- **Food scanning** — photo → AI names the dishes and guesses grams → the app *calculates* nutrition from its own food table → the user confirms or corrects. Packaged foods: **barcode scan** (Open Food Facts) or type the label.
+- **Daily dashboard** — calories, protein / carbs / fat vs targets, water tracker, today's meals.
+- **Goal calculator** with safety limits (no weight-loss deficit under 18, in pregnancy / breastfeeding, or at an underweight BMI → points to a doctor or dietitian).
+- **Meal planner** — a day of Indian meals for your targets, by region (Maharashtrian, North, South, Gujarati), diet (veg / egg / non-veg / vegan / Jain), allergies, and an optional **daily budget** (₹100 / 150 / 250).
+- **Progress** — weight trend with advice (flags unsafe fast loss), 7-day calories chart, streaks, **sleep and steps / exercise** (entered by hand).
+- **Family members** — track adults in your family (their consent is required; 18+ only), each with their own targets and data.
+- **AI nutrition chat** — answers general food questions using your goal and what you ate today.
+- **8 languages** — English, Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Gujarati (including food names).
+- Accounts: sign up, log in, forgot / reset password, delete my account and all data.
 
 ## See it in 1 minute (demo mode — no accounts, no keys)
 ```
 npm install
 npm run demo        # opens http://localhost:8081 in your browser
 ```
-Any email and password work. Everything runs in the browser against a built-in fake backend (`src/lib/demoBackend.ts`): data is kept in
-this browser only, sample meals and weigh-ins are added when you create a profile, and the AI scan / chat give **pre-written** answers
-(labelled "Demo reply"). The yellow banner has a **Reset** button. Demo mode is only on when `EXPO_PUBLIC_DEMO=1`, which `npm run demo` sets;
-a normal build never includes it.
+Any email and password work. Everything runs in the browser against a built-in fake backend (`src/lib/demoBackend.ts`): data stays in this browser, sample meals / weigh-ins / sleep are added when you create a profile, the barcode lookup returns a sample product, and the AI scan / chat give **pre-written** answers (labelled "Demo reply"). The yellow banner has a **Reset** button. Demo mode is only on when `EXPO_PUBLIC_DEMO=1`, which `npm run demo` sets; a normal build never includes it.
 
-## Set up for real (about 15 minutes)
-1. **Supabase**: create a free project at supabase.com. In the SQL editor run `supabase/migrations/0001_init.sql`, then `0002_v2.sql`.
-2. Copy `.env.example` to `.env` and paste the project URL and the publishable (anon) key (Project Settings → API).
-3. **Edge function** (needs the Supabase CLI): 
-   ```
-   supabase login
-   supabase link --project-ref YOUR-PROJECT-REF
-   supabase secrets set ANTHROPIC_API_KEY=your-key-here
-   supabase functions deploy analyze-food
-   supabase functions deploy nutrition-chat
-   ```
-   Optional secrets: `SCANS_PER_DAY` (20), `CHATS_PER_DAY` (40), `ANALYZE_MODEL` and `CHAT_MODEL` (default `claude-opus-5-5`; pick a cheaper model if cost matters).
-4. `npm install` then `npx expo start` (press `w` for web, or scan the QR code with Expo Go on your phone).
+## Put it on the internet (about 30 minutes, all free tiers)
+### 1. Database (Supabase)
+1. Create a free project at supabase.com (done for this project: `.env` / `.env.production` hold its URL and *publishable* key, which are safe to ship).
+2. **SQL editor → New query**, paste the whole of `supabase/all-in-one.sql`, press **Run**. (It is generated from `supabase/migrations/` by `npm run sql`.)
+3. **Authentication → URL Configuration**: set *Site URL* to your web address (e.g. `https://nutribharat-ai.vercel.app`) and add it under *Redirect URLs*. Email links (confirm account, reset password) return there.
+4. *Authentication → Providers → Email*: keep "Confirm email" on for a real launch (the app handles both).
 
-In Supabase → Authentication you can turn email confirmation on or off; the app handles both.
+### 2. AI functions (Supabase Edge Functions)
+Needs the Supabase CLI (`npm i -g supabase`, or use `npx supabase`):
+```
+npx supabase login
+npx supabase link --project-ref eyfisojorlbqwyzmjtnm
+npx supabase secrets set ANTHROPIC_API_KEY=your-key-here
+npx supabase functions deploy analyze-food
+npx supabase functions deploy nutrition-chat
+```
+The Anthropic key lives **only** here as a secret — never in the app, `.env` or Vercel. Optional secrets: `SCANS_PER_DAY` (20 per user), `CHATS_PER_DAY` (40), `ANALYZE_MODEL` and `CHAT_MODEL` (default `claude-opus-5-5`; choose a cheaper model if cost matters).
+
+### 3. The web app (Vercel, free)
+1. Push this folder to a GitHub repository.
+2. vercel.com → **Add New → Project** → import it. `vercel.json` already sets the build command (`npx expo export --platform web`) and output folder (`dist`).
+3. Open the Vercel address on a phone → **Install app** (Profile tab) or the browser's "Add to Home Screen".
+
+### Run locally against the real backend
+Copy `.env.example` to `.env` (already done here), then `npm install` and `npx expo start` (press `w` for web).
+
+### Android app file (APK) — optional
+Free Expo account, then `npx eas build -p android --profile preview` produces an installable `.apk`. Camera barcode scanning and install-from-file work there too. (Not set up yet: see "Before real users".)
+
+## Layout
+- `src/core/` — pure, unit-tested logic: food table, nutrition maths, goals, name matching, `planner.ts` (+ `prices.ts`), `progress.ts`, `wellness.ts`, `barcode.ts`.
+- `src/i18n/` — `en.ts` is the source of truth; every other language must define every key (a test enforces it, including `{placeholders}` and the doctor/dietitian referral in safety notes).
+- `src/app/` — Expo Router screens. `src/lib/` — Supabase client, data hooks, demo backend, PWA helpers. `src/state/` — session, active family member, draft meal.
+- `public/` — PWA files (manifest, icons, service worker, `index.html` template).
+- `supabase/` — migrations, `all-in-one.sql`, edge functions, and SQL tests that run the migrations in an in-memory Postgres.
 
 ## Commands
-- `npm test` — unit tests for the core logic.
+- `npm test` — unit tests, SQL / row-level-security tests, demo-backend tests (135).
 - `npm run typecheck` — TypeScript.
+- `npm run sql` — rebuild `supabase/all-in-one.sql` (a test fails if it is stale).
+- `npm run demo` — the no-keys demo.
 
 ## Before real users
-- **Food data**: `src/core/foods.ts` is a ~50-row *starter* table with approximate values, all marked `source: 'seed'`.
-  Replace/verify it against **IFCT 2017** (NIN Hyderabad) under the correct licence and add source attribution.
-- **Privacy & law**: the MVP requires users to be 18+ (India's DPDP Act needs verifiable parental consent for children).
-  Add a privacy policy, a consent screen and a data-retention statement before launch. Meal photos are not stored.
-- **Medical boundaries**: the app gives general wellness guidance only. It offers no weight-loss deficit under 18, in pregnancy,
-  while breastfeeding or at an underweight BMI, and points those users to a doctor or dietitian. Have a qualified dietitian review the wording.
-- **Password reset**: the app sends the reset email, but setting the new password needs deep-link handling (not built yet; planned for Release 3).
-- **Hindi / Marathi wording** was written by an AI and needs review by a native speaker and a dietitian, especially the safety notes.
-  Error messages that come from the edge functions are still English.
-- **Meal planner**: combinations are hand-written starter templates, not a clinical diet. Jain plans use a small curated set; allergies are only
-  checked for words the planner knows (milk, egg, fish, wheat/gluten, peanut) and anything else is reported back as "unchecked".
-- **Chat** is not stored; a usage row is written only to enforce the daily cap. The assistant is told to give general guidance and to refer medical
-  conditions, pregnancy, eating-disorder signs and very fast weight loss to a doctor or dietitian — test this with real questions before launch.
-- Not built yet (Release 3): barcode scanning, budget meal plans, sleep/steps tracking, family profiles, health-app integrations, subscriptions,
-  admin dashboard, more regional languages.
+- **Food data**: `src/core/foods.ts` is a ~50-row *starter* table with approximate values (`source: 'seed'`). Replace / verify against **IFCT 2017** (NIN Hyderabad) under the correct licence. Prices in `prices.ts` are rough estimates.
+- **Translations** (Hindi, Marathi, Tamil, Telugu, Kannada, Bengali, Gujarati) were written by an AI. Have a native speaker and a dietitian review them, especially the safety notes. Messages returned by the edge functions are still English.
+- **Privacy & law**: only adults (18+) can use the app or be added as family members, because India's DPDP Act needs verifiable parental consent for children. Add a privacy policy, a consent screen and a data-retention statement. Meal photos and chat messages are not stored.
+- **Medical boundaries**: general wellness guidance only. Have a qualified dietitian review the wording and the planner.
+- **Planner**: hand-written starter combinations. Allergies are only checked for milk, egg, fish, wheat/gluten, peanut — anything else is reported as "unchecked". Jain plans use a small curated set.
+- **Barcode data** comes from the community database Open Food Facts and can be wrong or missing (the app then asks you to type the label).
+- **Steps / sleep** are entered by hand (a web app cannot read the phone's health data).
+- **Password reset** works in the web app (email link opens the "new password" screen). In an Android APK it needs a deep link — not built yet.
+- **Not built**: health-app integrations (Google Fit / Apple Health), subscriptions (need Play Store / App Store accounts), admin dashboard (needs a separate secure server), iOS App Store build, Android adaptive icon artwork.

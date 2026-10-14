@@ -39,7 +39,8 @@
     "web": "expo start --web",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
-    "demo": "node scripts/demo.js"
+    "demo": "node scripts/demo.js",
+    "sql": "node scripts/build-sql.js"
   },
   "private": true
 }

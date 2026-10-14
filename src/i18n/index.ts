@@ -2,15 +2,26 @@ import { create } from 'zustand';
 import { en, type Key } from './en';
 import { hi } from './hi';
 import { mr } from './mr';
+import { ta } from './ta';
+import { te } from './te';
+import { kn } from './kn';
+import { bn } from './bn';
+import { gu } from './gu';
 import { FOOD_NAMES } from './foodNames';
 
-export type Lang = 'en' | 'hi' | 'mr';
+export type Lang = 'en' | 'hi' | 'mr' | 'ta' | 'te' | 'kn' | 'bn' | 'gu';
 export const LANGS: { code: Lang; label: string }[] = [
   { code: 'en', label: 'English' },
   { code: 'hi', label: 'हिन्दी' },
   { code: 'mr', label: 'मराठी' },
+  { code: 'ta', label: 'தமிழ்' },
+  { code: 'te', label: 'తెలుగు' },
+  { code: 'kn', label: 'ಕನ್ನಡ' },
+  { code: 'bn', label: 'বাংলা' },
+  { code: 'gu', label: 'ગુજરાતી' },
 ];
-export const DICTS: Record<Lang, Record<Key, string>> = { en, hi, mr };
+export const DICTS: Record<Lang, Record<Key, string>> = { en, hi, mr, ta, te, kn, bn, gu };
+const CODES = new Set<string>(Object.keys(DICTS));
 export type { Key };
 
 const STORAGE_KEY = 'nutribharat.lang';
@@ -18,12 +29,12 @@ const STORAGE_KEY = 'nutribharat.lang';
 function detect(): Lang {
   try {
     const saved = (globalThis as any).localStorage?.getItem(STORAGE_KEY);
-    if (saved === 'en' || saved === 'hi' || saved === 'mr') return saved;
+    if (saved && CODES.has(saved)) return saved as Lang;
   } catch { /* storage unavailable: fall through */ }
   try {
     const locale = Intl.DateTimeFormat().resolvedOptions().locale.toLowerCase();
-    if (locale.startsWith('hi')) return 'hi';
-    if (locale.startsWith('mr')) return 'mr';
+    const match = [...CODES].find((c) => c !== 'en' && locale.startsWith(c));
+    if (match) return match as Lang;
   } catch { /* ignore */ }
   return 'en';
 }

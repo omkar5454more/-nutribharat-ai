@@ -9,7 +9,7 @@ const MODEL = Deno.env.get('CHAT_MODEL') ?? 'claude-opus-5-5';
 
 const Body = z.object({
   messages: z.array(z.object({ role: z.enum(['user', 'assistant']), content: z.string().min(1).max(1500) })).min(1).max(12),
-  language: z.enum(['en', 'hi', 'mr']),
+  language: z.enum(['en', 'hi', 'mr', 'ta', 'te', 'kn', 'bn', 'gu']),
   context: z.object({
     goal: z.enum(['lose', 'maintain', 'gain']),
     diet: z.string().max(20),
@@ -27,6 +27,11 @@ const LANGUAGE_RULE: Record<string, string> = {
   en: 'Reply in simple English.',
   hi: 'Reply in simple Hindi written in Devanagari. Keep common food names the way people say them (roti, dal, paneer). Use plain everyday words.',
   mr: 'Reply in simple Marathi written in Devanagari. Keep common food names the way people say them (poli, varan, poha). Use plain everyday words.',
+  ta: 'Reply in simple Tamil written in Tamil script. Keep common food names the way people say them (idli, dosa, sambar). Use plain everyday words.',
+  te: 'Reply in simple Telugu written in Telugu script. Keep common food names the way people say them (annam, pappu, pulusu). Use plain everyday words.',
+  kn: 'Reply in simple Kannada written in Kannada script. Keep common food names the way people say them (ragi mudde, bisi bele bath, dose). Use plain everyday words.',
+  bn: 'Reply in simple Bengali written in Bengali script. Keep common food names the way people say them (bhaat, dal, machher jhol). Use plain everyday words.',
+  gu: 'Reply in simple Gujarati written in Gujarati script. Keep common food names the way people say them (rotli, dal, khichdi, dhokla). Use plain everyday words.',
 };
 
 function systemPrompt(ctx: z.infer<typeof Body>['context'], language: string) {
